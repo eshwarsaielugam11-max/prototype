@@ -17,6 +17,7 @@ from fastapi.responses import JSONResponse
 from backend.app.api.health import router as health_router
 from backend.app.config import Settings, get_settings
 from backend.app.db.init_db import init_db
+from backend.app.services.inference import InferenceService
 
 
 def setup_logging(log_level: str = "INFO") -> None:
@@ -46,6 +47,19 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error("Failed to initialize database on startup: %s", e, exc_info=True)
         raise
+
+    # Initialize InferenceService singleton
+    try:
+        logger.info("Initializing acoustic ML InferenceService...")
+        app.state.inference_service = InferenceService()
+        logger.info("Acoustic ML InferenceService successfully initialized and mounted on app.state.")
+    except Exception as e:
+        logger.warning(
+            "InferenceService initialization skipped or failed during startup: %s. "
+            "Inference endpoints will require models/artifact/ to be available.",
+            e,
+        )
+        app.state.inference_service = None
 
     yield
 
