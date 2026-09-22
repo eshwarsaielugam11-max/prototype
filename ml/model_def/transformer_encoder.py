@@ -64,8 +64,8 @@ class AttentionPool(nn.Module):
                 - attention_weights: Raw attention distribution of shape (B, N).
         """
         batch_size = tokens.shape[0]
-        # Expand query across batch: (B, 1, D)
-        query = self.query.expand(batch_size, -1, -1)
+        # Repeat query across batch to ensure contiguous physical buffer across backends (CUDA, MPS, CPU)
+        query = self.query.repeat(batch_size, 1, 1)
 
         # Multi-head attention: query attends to tokens (K=tokens, V=tokens)
         # out: (B, 1, D), weights: (B, 1, N)

@@ -1,0 +1,13 @@
+{
+  "seed": 42,
+  "batch_size": 16,
+  "lr": 0.0003,
+  "weight_decay": 0.01,
+  "max_epochs": 35,
+  "patience": 10,
+  "warmup_ratio": 0.05,
+  "num_workers": 2,
+  "checkpoint_dir": "models/checkpoints",
+  "artifact_dir": "models/artifact",
+  "log_csv_path": "training/notebooks/training_log.csv"
+}

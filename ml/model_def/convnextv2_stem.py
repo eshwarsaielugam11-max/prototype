@@ -69,13 +69,13 @@ class ConvNeXtV2Block(nn.Module):
         shortcut = x
         x = self.dwconv(x)
         # Permute to channels-last for LayerNorm & Linear layers
-        x = x.permute(0, 2, 3, 1)  # (B, H, W, C)
+        x = x.permute(0, 2, 3, 1).contiguous()  # (B, H, W, C)
         x = self.norm(x)
         x = self.pwconv1(x)
         x = self.act(x)
         x = self.grn(x)
         x = self.pwconv2(x)
-        x = x.permute(0, 3, 1, 2)  # (B, C, H, W)
+        x = x.permute(0, 3, 1, 2).contiguous()  # (B, C, H, W)
         return shortcut + x
 
 
@@ -102,10 +102,9 @@ class ConvNeXtV2Stem(nn.Module):
         self.depths = depths
         self.out_channels = channels[-1]
 
-        # Stage 0: Initial patch stem downsampling by (2, 2)
-        # Input (199, 768) -> (100, 384)
+        # Stage 0: Initial patch stem downsampling T by 2 (199 -> 100) and F by 8 (768 -> 96)
         self.stem = nn.Sequential(
-            nn.Conv2d(in_channels, channels[0], kernel_size=(3, 4), stride=(2, 2), padding=(1, 1)),
+            nn.Conv2d(in_channels, channels[0], kernel_size=(3, 8), stride=(2, 8), padding=(1, 0)),
             LayerNorm2d(channels[0]),
         )
         self.stage0 = nn.Sequential(
@@ -113,7 +112,7 @@ class ConvNeXtV2Stem(nn.Module):
         )
 
         # Stage 1: Downsampling by (2, 2) along (T, F)
-        # (100, 384) -> (50, 192)
+        # (100, 96) -> (50, 48)
         self.down1 = nn.Sequential(
             LayerNorm2d(channels[0]),
             nn.Conv2d(channels[0], channels[1], kernel_size=2, stride=2),
@@ -123,7 +122,7 @@ class ConvNeXtV2Stem(nn.Module):
         )
 
         # Stage 2: Downsample only along frequency F (stride=(1, 2)) to keep T'=50
-        # (50, 192) -> (50, 96)
+        # (50, 48) -> (50, 24)
         self.down2 = nn.Sequential(
             LayerNorm2d(channels[1]),
             nn.Conv2d(channels[1], channels[2], kernel_size=(1, 2), stride=(1, 2)),
