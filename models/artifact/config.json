@@ -1,0 +1,62 @@
+{
+  "version": "1.0.0",
+  "created_at": "2026-09-22T23:13:00Z",
+  "training_run_id": "colab-t4-run-20260922",
+  "model_name": "ParkinsonsVoiceClassifier",
+  "wavlm_checkpoint": "microsoft/wavlm-base-plus",
+  "classification_threshold": 0.55,
+  "T": 199,
+  "downsample_factor": 4,
+  "N": 50,
+  "model_config": {
+    "feature_dim": 768,
+    "temporal_frames": 199,
+    "stem_channels": [
+      48,
+      96,
+      192
+    ],
+    "stem_depths": [
+      2,
+      2,
+      4
+    ],
+    "transformer_dim": 256,
+    "transformer_layers": 3,
+    "transformer_heads": 4,
+    "transformer_ffn_dim": 1024,
+    "dropout": 0.3,
+    "mlp_hidden_dim": 128,
+    "num_classes": 1
+  },
+  "preprocess_config": {
+    "target_sr": 16000,
+    "trim_top_db": 30,
+    "normalize": true,
+    "segment_seconds": 4.0,
+    "pad_mode": "repeat"
+  },
+  "risk_tiers": {
+    "minimal": [
+      0.0,
+      0.25
+    ],
+    "low": [
+      0.25,
+      0.55
+    ],
+    "moderate": [
+      0.55,
+      0.75
+    ],
+    "high": [
+      0.75,
+      1.0
+    ]
+  },
+  "export_artifacts": {
+    "torchscript_model": "model.pt",
+    "state_dict": "model_state_dict.pt",
+    "evaluation_metrics": "eval_metrics.json"
+  }
+}

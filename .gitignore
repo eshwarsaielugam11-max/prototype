@@ -26,8 +26,11 @@ Thumbs.db
 # Model weights and artifacts
 *.pt
 *.onnx
+*.zip
 models/artifact/**
 !models/artifact/.gitkeep
+!models/artifact/config.json
+!models/artifact/eval_metrics.json
 
 # Datasets and processed data
 data/raw/**

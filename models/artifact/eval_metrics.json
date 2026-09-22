@@ -1,0 +1,100 @@
+{
+  "metadata": {
+    "model_name": "ParkinsonsVoiceClassifier",
+    "checkpoint": "models/artifact/best_model.pt",
+    "architecture": "Frozen WavLM-Base-Plus -> ConvNeXt V2 Stem (Atto) -> Transformer Encoder -> Attention Pooling -> MLP Head",
+    "parameter_count": 6417121,
+    "evaluation_date": "2026-09-22",
+    "is_screening_tool_not_diagnostic": true
+  },
+  "ipvs_held_out_test": {
+    "dataset_name": "Italian Parkinson's Voice and Speech (IPVS)",
+    "description": "Held-out test split of 10 completely unseen subjects (5 healthy, 5 PD) across 108 vocal recordings",
+    "total_samples": 108,
+    "healthy_samples": 44,
+    "parkinsons_samples": 64,
+    "roc_auc": 0.9645,
+    "pr_auc": 0.9712,
+    "calibration_ece_10_bins": 0.0533,
+    "threshold_0_50_default": {
+      "threshold": 0.5,
+      "accuracy": 0.9074,
+      "precision": 0.9219,
+      "recall_sensitivity": 0.9219,
+      "specificity": 0.8864,
+      "f1_score": 0.9219,
+      "confusion_matrix": {
+        "tn": 39,
+        "fp": 5,
+        "fn": 5,
+        "tp": 59
+      }
+    },
+    "threshold_0_55_val_optimized": {
+      "threshold": 0.55,
+      "selection_criterion": "Maximizing Youden's J statistic on the validation split (never tuned on test)",
+      "accuracy": 0.9167,
+      "precision": 0.9365,
+      "recall_sensitivity": 0.9219,
+      "specificity": 0.9091,
+      "f1_score": 0.9291,
+      "confusion_matrix": {
+        "tn": 40,
+        "fp": 4,
+        "fn": 5,
+        "tp": 59
+      }
+    }
+  },
+  "validation_threshold_optimization": {
+    "val_samples": 139,
+    "val_subjects": 10,
+    "val_optimal_youden_j_threshold": 0.55,
+    "val_optimal_f1_threshold": 0.02,
+    "selected_operational_threshold": 0.55
+  },
+  "mdvr_kcl_cross_dataset_generalization": {
+    "dataset_name": "Mobile Device Voice Recordings at King's College London (MDVR-KCL)",
+    "description": "Out-of-domain cross-dataset generalization check on 37 English continuous reading speech recordings from smartphones",
+    "total_samples": 37,
+    "healthy_samples": 21,
+    "parkinsons_samples": 16,
+    "roc_auc": 0.4554,
+    "pr_auc": 0.4412,
+    "threshold_0_50_default": {
+      "threshold": 0.5,
+      "accuracy": 0.5676,
+      "precision": 0.0,
+      "recall_sensitivity": 0.0,
+      "specificity": 1.0,
+      "f1_score": 0.0,
+      "confusion_matrix": {
+        "tn": 21,
+        "fp": 0,
+        "fn": 16,
+        "tp": 0
+      }
+    },
+    "threshold_0_55_val_optimized": {
+      "threshold": 0.55,
+      "accuracy": 0.5676,
+      "precision": 0.0,
+      "recall_sensitivity": 0.0,
+      "specificity": 1.0,
+      "f1_score": 0.0,
+      "confusion_matrix": {
+        "tn": 21,
+        "fp": 0,
+        "fn": 16,
+        "tp": 0
+      }
+    }
+  },
+  "documented_limitations": [
+    "Sample Size: The primary training dataset (IPVS) contains 65 total subjects (45 train, 10 val, 10 test). While clip counts are 831, the subject diversity is constrained.",
+    "Single Language: Training audio was exclusively Italian. English phonology, vowel formant frequencies, and prosody differ significantly.",
+    "Acoustic Channel Mismatch: The model was trained on high-grade studio condenser microphone recordings. Consumer smartphones (as in MDVR-KCL) exhibit different frequency responses, compression artifacts, and ambient noise profiles.",
+    "Task Variation: IPVS features predominantly sustained vowel phonations, reading prose, and syllable DDK tasks. Testing purely continuous reading passages from a different language resulted in severe domain shift (ROC-AUC 0.4554).",
+    "Clinical Use: This tool is strictly a screening and research decision-support aid. It cannot replace a comprehensive neurological examination, DaTscan, or clinical UPDRS evaluation."
+  ]
+}
