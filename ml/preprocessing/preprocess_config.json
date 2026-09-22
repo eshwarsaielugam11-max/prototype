@@ -1,0 +1,7 @@
+{
+  "target_sr": 16000,
+  "trim_top_db": 30,
+  "normalize": true,
+  "segment_seconds": 4.0,
+  "pad_mode": "repeat"
+}
