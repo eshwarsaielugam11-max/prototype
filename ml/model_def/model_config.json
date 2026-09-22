@@ -1,0 +1,21 @@
+{
+  "feature_dim": 768,
+  "temporal_frames": 199,
+  "stem_channels": [
+    48,
+    96,
+    192
+  ],
+  "stem_depths": [
+    2,
+    2,
+    4
+  ],
+  "transformer_dim": 256,
+  "transformer_layers": 3,
+  "transformer_heads": 4,
+  "transformer_ffn_dim": 1024,
+  "dropout": 0.3,
+  "mlp_hidden_dim": 128,
+  "num_classes": 1
+}
