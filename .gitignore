@@ -34,6 +34,8 @@ data/raw/**
 !data/raw/.gitkeep
 data/processed/**
 !data/processed/.gitkeep
+!data/processed/metadata.csv
+!data/processed/split_manifest.json
 
 # Ensure .gitkeep files are preserved everywhere
 !**/.gitkeep

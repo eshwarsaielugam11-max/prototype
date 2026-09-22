@@ -8,17 +8,20 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 echo "=== Setting up Python virtual environment (.venv) ==="
 cd "${REPO_ROOT}"
 
-# Detect Python binary (prefer stable versions 3.11 / 3.12 / 3.10 for PyTorch compatibility)
+# Detect Python binary (prefer stable versions 3.11 / 3.12 / 3.13 / 3.10 for PyTorch compatibility)
 PYTHON_CMD=""
-for cmd in python3.11 python3.12 python3.10 python3 python; do
+for cmd in python3.11 python3.12 python3.13 /Library/Frameworks/Python.framework/Versions/3.13/bin/python3 python3.10 python3 python; do
     if command -v "${cmd}" >/dev/null 2>&1; then
-        PYTHON_CMD="${cmd}"
-        break
+        # Verify candidate can create a minimal venv or run ensurepip
+        if "${cmd}" -c "import ensurepip" >/dev/null 2>&1; then
+            PYTHON_CMD="${cmd}"
+            break
+        fi
     fi
 done
 
 if [ -z "${PYTHON_CMD}" ]; then
-    echo "Error: Python 3 is required but was not found in PATH." >&2
+    echo "Error: Python 3 with ensurepip support is required but was not found in PATH." >&2
     exit 1
 fi
 
