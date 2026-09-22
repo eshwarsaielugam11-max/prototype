@@ -1,0 +1,39 @@
+# Python environments
+venv/
+.venv/
+env/
+ENV/
+
+# Byte-compiled / cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment variables
+.env
+.env.local
+
+# Node / Frontend
+node_modules/
+dist/
+build/
+.npm/
+
+# Operating System files
+.DS_Store
+Thumbs.db
+
+# Model weights and artifacts
+*.pt
+*.onnx
+models/artifact/**
+!models/artifact/.gitkeep
+
+# Datasets and processed data
+data/raw/**
+!data/raw/.gitkeep
+data/processed/**
+!data/processed/.gitkeep
+
+# Ensure .gitkeep files are preserved everywhere
+!**/.gitkeep
