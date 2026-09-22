@@ -18,6 +18,7 @@ from backend.app.api.health import router as health_router
 from backend.app.config import Settings, get_settings
 from backend.app.db.init_db import init_db
 from backend.app.services.inference import InferenceService
+from backend.app.services.rag import RAGService
 
 
 def setup_logging(log_level: str = "INFO") -> None:
@@ -60,6 +61,19 @@ async def lifespan(app: FastAPI):
             e,
         )
         app.state.inference_service = None
+
+    # Initialize RAGService singleton
+    try:
+        logger.info("Initializing RAG retrieval service...")
+        app.state.rag_service = RAGService()
+        logger.info("RAG retrieval service successfully initialized and mounted on app.state.")
+    except Exception as e:
+        logger.warning(
+            "RAGService initialization skipped or failed during startup: %s. "
+            "RAG retrieval endpoints will require knowledge base ingestion ('python -m rag.ingestion.ingest').",
+            e,
+        )
+        app.state.rag_service = None
 
     yield
 

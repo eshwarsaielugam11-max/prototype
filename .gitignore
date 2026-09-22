@@ -28,6 +28,7 @@ Thumbs.db
 *.sqlite
 *.sqlite3
 backend/app.db
+rag/knowledge_base/chroma_db/
 
 # Model weights and artifacts
 *.pt
