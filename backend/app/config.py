@@ -40,7 +40,7 @@ class Settings(BaseSettings):
 
     # Relational Database (SQLite History)
     sqlite_db_path: str = Field(
-        default="./backend/app/db/platform.db",
+        default="./backend/app.db",
         description="File path to the SQLite application database",
     )
 

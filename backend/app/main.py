@@ -1,9 +1,10 @@
 """FastAPI Application Main Entrypoint.
 
 Configures CORS middleware, structured logging, request correlation IDs,
-app-level exception shields, and wires the /api/v1 router tree.
+app-level exception shields, database auto-initialization, and wires the /api/v1 router tree.
 """
 
+from contextlib import asynccontextmanager
 import logging
 import time
 import uuid
@@ -15,6 +16,7 @@ from fastapi.responses import JSONResponse
 
 from backend.app.api.health import router as health_router
 from backend.app.config import Settings, get_settings
+from backend.app.db.init_db import init_db
 
 
 def setup_logging(log_level: str = "INFO") -> None:
@@ -34,6 +36,23 @@ def setup_logging(log_level: str = "INFO") -> None:
 logger = logging.getLogger("parkinsons_platform.backend")
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan managing startup and shutdown hooks."""
+    # Startup: Auto-create database tables
+    logger.info("Running application startup lifecycle...")
+    try:
+        init_db()
+    except Exception as e:
+        logger.error("Failed to initialize database on startup: %s", e, exc_info=True)
+        raise
+
+    yield
+
+    # Shutdown
+    logger.info("Running application shutdown lifecycle...")
+
+
 def create_app() -> FastAPI:
     """Construct and configure FastAPI application instance."""
     settings = get_settings()
@@ -48,6 +67,7 @@ def create_app() -> FastAPI:
         version="1.0.0",
         docs_url="/docs",
         redoc_url="/redoc",
+        lifespan=lifespan,
     )
 
     # 1. Request ID and Request Logging Middleware with Exception Shield
