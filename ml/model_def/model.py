@@ -75,16 +75,16 @@ class ParkinsonsVoiceClassifier(nn.Module):
     """Hybrid ConvNeXt V2 + Transformer classification model for Parkinson's screening.
 
     Pipeline:
-        1. ConvNeXt V2 Atto-scale Stem: (B, 1, T=199, F=768) -> (B, C=192, T'=50, F'=96)
-        2. Temporal Token Conversion: Pool frequency F' -> (B, T'=50, C=192)
+        1. ConvNeXt V2 Atto-scale Stem: (B, 1, T=199, F=768) -> (B, C=192, T'=50, F'=48)
+        2. Flatten frequency dim & Project: (B, T'=50, C*F') -> (B, T'=50, D=256)
         3. Transformer Encoder Stack: 3 layers, 4 heads, D=256 with learned positional encodings
-        4. Attention-Pooling Head: Single learnable query attends over T' tokens -> (B, D=256)
+        4. Attention-Pooling Head: Single learnable query attends over T'=50 tokens -> (B, D=256)
         5. MLP Classifier Head: Linear(256, 128) -> GELU -> Dropout(0.3) -> Linear(128, 1) -> logit
 
     Forward Return Contract:
         Always returns `(logit, attention_weights)` where:
         - logit: Tensor of shape (B, 1) containing unnormalized log-odds of Parkinson's.
-        - attention_weights: Tensor of shape (B, N) containing normalized query attention weights
+        - attention_weights: Tensor of shape (B, 50) containing normalized query attention weights
           across the temporal token sequence for clinical explainability.
     """
 
@@ -94,28 +94,24 @@ class ParkinsonsVoiceClassifier(nn.Module):
 
         # 1. Atto-scale ConvNeXt V2 Stem
         self.stem = ConvNeXtV2Stem(
-            in_channels=1,
-            channels=self.config.stem_channels,
-            depths=self.config.stem_depths,
+            in_features=self.config.feature_dim,
+            channels=tuple(self.config.stem_channels),
+            depths=tuple(self.config.stem_depths),
         )
-        stem_out_dim = self.config.stem_channels[-1]
 
         # 2. Transformer Encoder Stack with learned positional encodings
         self.encoder = TransformerEncoderModule(
-            in_dim=stem_out_dim,
+            in_channels=self.config.stem_channels[-1],
+            freq_dim=48,
             d_model=self.config.transformer_dim,
             nhead=self.config.transformer_heads,
             num_layers=self.config.transformer_layers,
-            dim_feedforward=self.config.transformer_ffn_dim,
-            dropout=0.1,  # Standard encoder internal dropout
-            max_seq_len=512,
+            num_tokens=50,
+            dropout=self.config.dropout,
         )
 
         # 3. Attention-Pooling Head with learnable query
-        self.pool = AttentionPool(
-            embed_dim=self.config.transformer_dim,
-            num_heads=self.config.transformer_heads,
-        )
+        self.pool = AttentionPool(d_model=self.config.transformer_dim)
 
         # 4. Classification Head (Linear -> GELU -> Dropout(0.3) -> Linear -> 1 logit)
         self.head = nn.Sequential(
@@ -125,28 +121,38 @@ class ParkinsonsVoiceClassifier(nn.Module):
             nn.Linear(self.config.mlp_hidden_dim, self.config.num_classes),
         )
 
-        self._init_weights()
+    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Forward pass adhering to the (logit, attention_weights) contract.
 
-    def _init_weights(self):
-        """Initialize weights using standard truncated normal / Xavier init."""
-        for m in self.modules():
-            if isinstance(m, (nn.Linear, nn.Conv2d)):
-                nn.init.trunc_normal_(m.weight, std=0.02)
-                if m.bias is not None:
-                    nn.init.zeros_(m.bias)
-            elif isinstance(m, (nn.LayerNorm, nn.GroupNorm)):
-                if m.weight is not None:
-                    nn.init.ones_(m.weight)
-                if m.bias is not None:
-                    nn.init.zeros_(m.bias)
+        Args:
+            x: Input tensor of shape (B, T=199, F=768) or (B, 1, T=199, F=768).
+
+        Returns:
+            Tuple of:
+            - logit: Tensor of shape (B, 1) representing unnormalized log-odds.
+            - attention_weights: Tensor of shape (B, 50) representing normalized temporal attention.
+        """
+        # 1. Convolutional stem
+        x = self.stem(x)
+
+        # 2. Transformer sequence modeling
+        tokens = self.encoder(x)
+
+        # 3. Attention-based query pooling
+        pooled, attention_weights = self.pool(tokens)
+
+        # 4. Classification MLP (B, 1)
+        logits = self.head(pooled)
+
+        return logits, attention_weights
 
     def count_parameters(self) -> Dict[str, int]:
-        """Count parameters across submodules and total."""
+        """Count total and per-module trainable parameters."""
         stem_p = sum(p.numel() for p in self.stem.parameters() if p.requires_grad)
         enc_p = sum(p.numel() for p in self.encoder.parameters() if p.requires_grad)
         pool_p = sum(p.numel() for p in self.pool.parameters() if p.requires_grad)
         head_p = sum(p.numel() for p in self.head.parameters() if p.requires_grad)
-        total_p = sum(p.numel() for p in self.parameters() if p.requires_grad)
+        total_p = stem_p + enc_p + pool_p + head_p
         return {
             "stem": stem_p,
             "encoder": enc_p,
@@ -155,38 +161,30 @@ class ParkinsonsVoiceClassifier(nn.Module):
             "total": total_p,
         }
 
-    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Forward pass through the full classification architecture.
 
-        Args:
-            x: Input cached WavLM features of shape (B, T, 768) or (B, 1, T, 768).
+def load_trained_model(
+    checkpoint_path: Union[str, Path] = "models/artifact/best_model.pt",
+    device: str = "cpu",
+) -> ParkinsonsVoiceClassifier:
+    """Convenience factory function to instantiate and load the trained classifier weights.
 
-        Returns:
-            Tuple of (logit, attention_weights):
-                - logit: Tensor of shape (B, 1)
-                - attention_weights: Tensor of shape (B, N)
-        """
-        # Ensure 4D shape: (B, 1, T, F)
-        if x.ndim == 3:
-            x = x.unsqueeze(1)
+    Args:
+        checkpoint_path: Path to the .pt checkpoint file.
+        device: Device to map tensors onto ('cpu', 'cuda', or 'mps').
 
-        # 1. ConvNeXt V2 Stem: (B, 1, 199, 768) -> (B, 192, T'=50, F'=96)
-        feat_map = self.stem(x)
+    Returns:
+        ParkinsonsVoiceClassifier with trained weights loaded in evaluation mode.
+    """
+    path = Path(checkpoint_path)
+    if not path.exists():
+        raise FileNotFoundError(f"Checkpoint not found at: {path.resolve()}")
 
-        # 2. Pool frequency axis to create temporal token sequence:
-        # (B, C=192, T'=50, F'=96) -> (B, C=192, T'=50)
-        temporal_feat = feat_map.mean(dim=-1)
+    model = ParkinsonsVoiceClassifier()
+    state_dict = torch.load(str(path), map_location=device)
+    if isinstance(state_dict, dict) and "model_state_dict" in state_dict:
+        state_dict = state_dict["model_state_dict"]
 
-        # 3. Permute to (B, N=T', C=192)
-        tokens = temporal_feat.permute(0, 2, 1)
-
-        # 4. Contextualize tokens with Transformer Encoder: (B, N=50, D=256)
-        encoded_tokens = self.encoder(tokens)
-
-        # 5. Attention-pool over all N tokens: (B, D=256), attention_weights: (B, N=50)
-        pooled_feat, attention_weights = self.pool(encoded_tokens)
-
-        # 6. Classification head: (B, 256) -> (B, 1)
-        logit = self.head(pooled_feat)
-
-        return logit, attention_weights
+    model.load_state_dict(state_dict, strict=True)
+    model.to(device)
+    model.eval()
+    return model

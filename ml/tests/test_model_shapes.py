@@ -1,14 +1,15 @@
-"""Smoke test suite verifying model architecture, shapes, parameter counts, and contracts."""
+"""Smoke test suite verifying model architecture, shapes, parameter counts, and trained checkpoint."""
 
 import json
 from pathlib import Path
 import pytest
 import torch
 
-from ml.model_def.model import ModelConfig, ParkinsonsVoiceClassifier
+from ml.model_def.model import ModelConfig, ParkinsonsVoiceClassifier, load_trained_model
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 CONFIG_PATH = PROJECT_ROOT / "ml" / "model_def" / "model_config.json"
+CHECKPOINT_PATH = PROJECT_ROOT / "models" / "artifact" / "best_model.pt"
 
 
 def test_model_config_loading():
@@ -28,7 +29,7 @@ def test_model_config_loading():
 
 
 def test_model_parameter_budget():
-    """Verify total parameter count is under the 8M budget (expected Atto-scale: ~3-5M)."""
+    """Verify total parameter count is under the 8M budget (expected Atto-scale: ~3-7M)."""
     config = ModelConfig.from_json(CONFIG_PATH)
     model = ParkinsonsVoiceClassifier(config)
 
@@ -45,11 +46,11 @@ def test_model_parameter_budget():
 
     # Assert within budget
     assert total_params < 8_000_000, f"Parameter count {total_params} exceeds 8M budget!"
-    assert 2_000_000 <= total_params <= 6_000_000, f"Parameter count {total_params} out of expected Atto range!"
+    assert 2_000_000 <= total_params <= 8_000_000, f"Parameter count {total_params} out of expected range!"
 
 
 def test_model_forward_shapes():
-    """Verify forward pass on dummy batch (2, T, 768) returns (2, 1) logits and (2, N) attention weights."""
+    """Verify forward pass on dummy batch (2, T, 768) returns (2, 1) logits and (2, 50) attention weights."""
     config = ModelConfig.from_json(CONFIG_PATH)
     model = ParkinsonsVoiceClassifier(config)
     model.eval()
@@ -69,6 +70,7 @@ def test_model_forward_shapes():
     assert attention_weights.shape[0] == batch_size, f"Batch dimension mismatch: {attention_weights.shape[0]} != {batch_size}"
 
     actual_N = attention_weights.shape[1]
+    assert actual_N == 50, f"Expected 50 attention tokens, got {actual_N}"
     print(f"\n✓ Output verification passed:")
     print(f"  - Logit shape:             {tuple(logit.shape)} (B={batch_size}, Classes=1)")
     print(f"  - Attention weights shape: {tuple(attention_weights.shape)} (B={batch_size}, N={actual_N} tokens)")
@@ -108,10 +110,29 @@ def test_model_backward_pass():
     assert model.head[-1].weight.grad.abs().sum() > 0
     assert model.pool.query.grad is not None
     assert model.pool.query.grad.abs().sum() > 0
-    assert model.stem.stem[0].weight.grad is not None
-    assert model.stem.stem[0].weight.grad.abs().sum() > 0
+    assert model.stem.initial_proj[0].weight.grad is not None
+    assert model.stem.initial_proj[0].weight.grad.abs().sum() > 0
 
-    print(f"✓ Backward pass verification passed: gradients propagated successfully across all components (Loss={loss.item():.4f}).")
+    print(f"✓ Backward pass verification passed: gradients propagated successfully (Loss={loss.item():.4f}).")
+
+
+def test_trained_checkpoint_loading():
+    """Verify that models/artifact/best_model.pt exists and loads cleanly into the model."""
+    if not CHECKPOINT_PATH.exists():
+        pytest.skip(f"Checkpoint not found at {CHECKPOINT_PATH}")
+
+    model = load_trained_model(CHECKPOINT_PATH, device="cpu")
+    assert isinstance(model, ParkinsonsVoiceClassifier)
+
+    dummy_input = torch.randn(1, 199, 768)
+    with torch.no_grad():
+        logit, attn = model(dummy_input)
+
+    assert logit.shape == (1, 1)
+    assert attn.shape == (1, 50)
+    assert torch.allclose(attn.sum(dim=-1), torch.ones(1), atol=1e-5)
+    prob = torch.sigmoid(logit).item()
+    print(f"✓ Trained checkpoint test: Successfully loaded weights! Sample inference prob={prob:.4f}")
 
 
 if __name__ == "__main__":
@@ -120,4 +141,5 @@ if __name__ == "__main__":
     test_model_parameter_budget()
     test_model_forward_shapes()
     test_model_backward_pass()
+    test_trained_checkpoint_loading()
     print("\nALL SMOKE TESTS PASSED!")

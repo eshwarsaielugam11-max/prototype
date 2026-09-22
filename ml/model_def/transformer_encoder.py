@@ -1,129 +1,101 @@
-"""Transformer Encoder and Attention-Pooling Head for Parkinson's Voice Platform.
+"""Transformer Encoder and Attention-Pooling modules for Parkinson's Voice Platform.
 
-Processes the token sequence produced by the ConvNeXt V2 stem with learned
-positional embeddings, multi-head self-attention layers for global temporal context,
-and an attention-pooling head that returns both pooled features and raw attention
-weights for clinical explainability.
+Processes the token sequence output from the ConvNeXt V2 stem, incorporating
+learned positional encodings, self-attention across time frames, and a learnable
+single-query attention pooling mechanism that extracts a clinical explainability map.
 """
 
 from typing import Tuple
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class LearnedPositionalEncoding(nn.Module):
-    """Learned 1D positional embeddings for sequence tokens."""
+    """Learned positional embeddings for transformer tokens."""
 
-    def __init__(self, embed_dim: int, max_len: int = 512, std: float = 0.02):
+    def __init__(self, max_seq_len: int = 512, d_model: int = 256):
         super().__init__()
-        self.pos_embed = nn.Parameter(torch.randn(1, max_len, embed_dim) * std)
+        self.pos_embedding = nn.Parameter(torch.randn(1, max_seq_len, d_model) * 0.02)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Add learned positional encoding to input token sequence.
-
-        Args:
-            x: Input sequence of shape (B, N, D).
-
-        Returns:
-            Position-encoded sequence of shape (B, N, D).
-        """
-        seq_len = x.shape[1]
-        return x + self.pos_embed[:, :seq_len, :]
-
-
-class AttentionPool(nn.Module):
-    """Attention-pooling head with a learnable query attending over all tokens.
-
-    Aggregates a variable or fixed token sequence (B, N, D) into a single summary
-    representation (B, D) via multi-head cross-attention with a learnable query vector.
-    Crucially returns the raw attention weights (B, N) for downstream clinical
-    temporal attribution and explainability.
-    """
-
-    def __init__(self, embed_dim: int, num_heads: int = 4, std: float = 0.02):
-        super().__init__()
-        self.embed_dim = embed_dim
-        self.num_heads = num_heads
-        # Learnable global summary query (analogous to a dynamic CLS token query)
-        self.query = nn.Parameter(torch.randn(1, 1, embed_dim) * std)
-        self.mha = nn.MultiheadAttention(
-            embed_dim=embed_dim,
-            num_heads=num_heads,
-            batch_first=True,
-        )
-
-    def forward(self, tokens: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Compute attention-pooled vector and return temporal attention weights.
-
-        Args:
-            tokens: Encoded sequence tokens of shape (B, N, D).
-
-        Returns:
-            Tuple of:
-                - pooled: Summary representation of shape (B, D).
-                - attention_weights: Raw attention distribution of shape (B, N).
-        """
-        batch_size = tokens.shape[0]
-        # Repeat query across batch to ensure contiguous physical buffer across backends (CUDA, MPS, CPU)
-        query = self.query.repeat(batch_size, 1, 1)
-
-        # Multi-head attention: query attends to tokens (K=tokens, V=tokens)
-        # out: (B, 1, D), weights: (B, 1, N)
-        out, weights = self.mha(
-            query=query,
-            key=tokens,
-            value=tokens,
-            need_weights=True,
-            average_attn_weights=True,
-        )
-
-        pooled = out.squeeze(1)               # (B, D)
-        attention_weights = weights.squeeze(1) # (B, N)
-        return pooled, attention_weights
+        seq_len = x.size(1)
+        return x + self.pos_embedding[:, :seq_len, :]
 
 
 class TransformerEncoderModule(nn.Module):
-    """Complete Transformer Encoder stack with projection, positional encoding, and self-attention."""
+    """Transformer Encoder operating over downsampled temporal speech tokens."""
 
     def __init__(
         self,
-        in_dim: int,
+        in_channels: int = 192,
+        freq_dim: int = 48,
         d_model: int = 256,
         nhead: int = 4,
         num_layers: int = 3,
-        dim_feedforward: int = 1024,
-        dropout: float = 0.1,
-        max_seq_len: int = 512,
+        num_tokens: int = 50,
+        dropout: float = 0.3,
     ):
         super().__init__()
-        self.proj = nn.Linear(in_dim, d_model) if in_dim != d_model else nn.Identity()
-        self.pos_encoding = LearnedPositionalEncoding(embed_dim=d_model, max_len=max_seq_len)
-        self.layer_norm = nn.LayerNorm(d_model)
-
+        self.d_model = d_model
+        self.token_proj = nn.Linear(in_channels * freq_dim, d_model)
+        self.pos_embedding = nn.Parameter(torch.randn(1, num_tokens, d_model) * 0.02)
+        self.dropout = nn.Dropout(dropout)
         encoder_layer = nn.TransformerEncoderLayer(
             d_model=d_model,
             nhead=nhead,
-            dim_feedforward=dim_feedforward,
+            dim_feedforward=1024,
             dropout=dropout,
             activation="gelu",
             batch_first=True,
-            norm_first=True,
         )
-        self.encoder = nn.TransformerEncoder(
-            encoder_layer=encoder_layer,
-            num_layers=num_layers,
-        )
+        self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
+        self.layer_norm = nn.LayerNorm(d_model)
 
-    def forward(self, tokens: torch.Tensor) -> torch.Tensor:
-        """Project tokens, add positional encodings, and process with Transformer.
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward pass converting feature map into contextualized token representations.
 
         Args:
-            tokens: Input token sequence of shape (B, N, in_dim).
+            x: Tensor of shape (B, C=192, T'=50, F'=48) from ConvNeXt V2 stem.
 
         Returns:
-            Contextualized tokens of shape (B, N, d_model).
+            Tokens tensor of shape (B, T'=50, d_model=256).
         """
-        tokens = self.proj(tokens)
-        tokens = self.pos_encoding(tokens)
-        tokens = self.layer_norm(tokens)
-        return self.encoder(tokens)
+        B, C, T_down, F_down = x.shape
+        tokens = x.permute(0, 2, 1, 3).contiguous().view(B, T_down, C * F_down)
+        tokens = self.token_proj(tokens)
+        tokens = self.dropout(tokens + self.pos_embedding[:, :T_down, :])
+        out = self.transformer(tokens)
+        return self.layer_norm(out)
+
+
+class AttentionPool(nn.Module):
+    """Single learnable [CLS]-style query attention pooling mechanism.
+
+    Provides both pooled embedding representation and normalized attention weights
+    over the temporal token sequence for clinical explainability / attention rollout.
+    """
+
+    def __init__(self, d_model: int = 256):
+        super().__init__()
+        self.d_model = d_model
+        self.query = nn.Parameter(torch.randn(1, 1, d_model) * 0.02)
+        self.scale = d_model ** -0.5
+
+    def forward(self, tokens: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Aggregate tokens into a single clinical feature vector.
+
+        Args:
+            tokens: Sequence tensor of shape (B, N=50, d_model=256).
+
+        Returns:
+            Tuple of:
+            - pooled: (B, d_model) aggregated embedding vector.
+            - attention_weights: (B, N) normalized attention distribution summing to 1.
+        """
+        B = tokens.size(0)
+        query = self.query.repeat(B, 1, 1)
+        attn_logits = torch.bmm(query, tokens.transpose(1, 2)) * self.scale
+        attn_weights = F.softmax(attn_logits, dim=-1)
+        pooled = torch.bmm(attn_weights, tokens).squeeze(1)
+        return pooled, attn_weights.squeeze(1)
