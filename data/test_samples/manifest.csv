@@ -1,0 +1,11 @@
+filename,group,task_type,duration_sec,sample_rate_hz,expected_outcome
+healthy_controls/healthy_01_sustained_vowel_a.wav,Elderly Healthy Control,Sustained Vowel /a/,4.00,16000,low_risk_indicated
+healthy_controls/healthy_02_syllables_pataka.wav,Elderly Healthy Control,Syllable Repetition /pa-ta-ka/,4.00,16000,low_risk_indicated
+healthy_controls/healthy_03_sustained_vowel_a.wav,Elderly Healthy Control,Sustained Vowel /a/,4.00,16000,low_risk_indicated
+healthy_controls/healthy_04_reading_passage.wav,Elderly Healthy Control,Phonetically Balanced Passage,4.00,16000,low_risk_indicated
+healthy_controls/healthy_05_mobile_phonation.wav,Healthy Smartphone Recording,Mobile Device Phonation,4.00,16000,low_risk_indicated
+parkinsons_risk/pd_01_sustained_vowel_a.wav,Parkinsons Patient (H&Y 1.5),Sustained Vowel /a/,4.00,16000,parkinsons_risk_indicated
+parkinsons_risk/pd_02_syllables_pataka.wav,Parkinsons Patient (H&Y 1.5),Syllable Repetition /pa-ta-ka/,4.00,16000,parkinsons_risk_indicated
+parkinsons_risk/pd_03_reading_passage.wav,Parkinsons Patient (H&Y 1.5),Phonetically Balanced Passage,4.00,16000,parkinsons_risk_indicated
+parkinsons_risk/pd_04_sustained_vowel_a.wav,Parkinsons Patient (Stage 2),Sustained Vowel /a/,4.00,16000,parkinsons_risk_indicated
+parkinsons_risk/pd_05_syllables_pataka.wav,Parkinsons Patient (Stage 2),Syllable Repetition /pa-ta-ka/,4.00,16000,parkinsons_risk_indicated
