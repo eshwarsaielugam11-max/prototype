@@ -16,7 +16,7 @@ describe('AttentionHeatmap Component', () => {
     expect(screen.getByText(/Time-Aligned Attention Rollout Heatmap/i)).toBeInTheDocument();
     expect(screen.getByText(/Peak Salience: 1.00s/i)).toBeInTheDocument();
     expect(screen.getByText(/5 acoustic frames/i)).toBeInTheDocument();
-    expect(screen.getByText(/Explainability Limitation/i)).toBeInTheDocument();
+    expect(screen.getByText(/Explainability Notice/i)).toBeInTheDocument();
   });
 
   it('renders fallback when attention data is missing or empty', () => {

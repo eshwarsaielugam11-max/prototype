@@ -87,7 +87,7 @@ describe('Report Page', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/1\. Model Acoustic Prediction/i)).toBeInTheDocument();
+      expect(screen.getByText(/Model prediction/i)).toBeInTheDocument();
     });
 
     // Section 1
@@ -95,16 +95,16 @@ describe('Report Page', () => {
     expect(screen.getByText(/50.0%/i)).toBeInTheDocument();
 
     // Section 2
-    expect(screen.getByText(/2\. Retrieved Authoritative Evidence/i)).toBeInTheDocument();
+    expect(screen.getByText(/Retrieved reference information/i)).toBeInTheDocument();
     expect(screen.getByText(/Movement Disorders Clinical Journal 2021/i)).toBeInTheDocument();
     expect(screen.getByText(/Vocal acoustic changes often present as reduced pitch range/i)).toBeInTheDocument();
 
     // Section 3
-    expect(screen.getByText(/3\. AI-Generated Clinical Synthesis/i)).toBeInTheDocument();
+    expect(screen.getByText(/AI-generated explanation/i)).toBeInTheDocument();
     expect(screen.getByText(/Screening indicates elevated vocal biomarkers/i)).toBeInTheDocument();
 
     // Section 4
-    expect(screen.getByText(/4\. Mandatory Clinical & Research Disclaimer/i)).toBeInTheDocument();
+    expect(screen.getByText(/Important disclaimer/i)).toBeInTheDocument();
     expect(screen.getByText(/This is a research screening tool\. It does not diagnose Parkinson's disease\./i)).toBeInTheDocument();
   });
 
@@ -140,7 +140,7 @@ describe('Report Page', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/1\. Model Acoustic Prediction/i)).toBeInTheDocument();
+      expect(screen.getByText(/Model prediction/i)).toBeInTheDocument();
     });
 
     const copyBtn = screen.getAllByRole('button', { name: /Copy/i })[0];

@@ -1,17 +1,22 @@
-import React, { useState, useMemo } from 'react';
-import { Sparkles, Info, AlertCircle, Clock } from 'lucide-react';
+import React, { useState, useMemo, useRef } from 'react';
+import { Sparkles, Info, AlertCircle, Clock, Play, Pause, RotateCcw } from 'lucide-react';
 import { AttentionHeatmapData } from '../api/client';
 
 interface AttentionHeatmapProps {
   attentionData: AttentionHeatmapData | null;
   audioDurationSec?: number;
+  audioUrl?: string | null;
 }
 
 export const AttentionHeatmap: React.FC<AttentionHeatmapProps> = ({
   attentionData,
   audioDurationSec,
+  audioUrl,
 }) => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [currentTime, setCurrentTime] = useState<number>(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Extract and validate series
   const { timestamps, attentionWeights, peakTimestamp, maxWeight, valid } = useMemo(() => {
@@ -41,76 +46,149 @@ export const AttentionHeatmap: React.FC<AttentionHeatmapProps> = ({
     };
   }, [attentionData]);
 
+  const totalDuration = audioDurationSec || (timestamps[timestamps.length - 1] ?? 4.0);
+
+  // Audio time synchronization
+  const handleTimeUpdate = () => {
+    if (audioRef.current) {
+      setCurrentTime(audioRef.current.currentTime);
+    }
+  };
+
+  const handleAudioEnded = () => {
+    setIsPlaying(false);
+    setCurrentTime(0);
+  };
+
+  const togglePlayPause = () => {
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      audioRef.current.play().catch(e => console.error('Audio play error:', e));
+      setIsPlaying(true);
+    }
+  };
+
+  const restartAudio = () => {
+    if (!audioRef.current) return;
+    audioRef.current.currentTime = 0;
+    setCurrentTime(0);
+    audioRef.current.play().catch(e => console.error('Audio play error:', e));
+    setIsPlaying(true);
+  };
+
   if (!valid) {
     return (
-      <div className="rounded-xl bg-slate-50 border border-slate-200 p-6 text-center text-slate-500 text-sm">
-        <AlertCircle className="w-6 h-6 text-slate-400 mx-auto mb-2" />
-        <p className="font-medium text-slate-700">Attention Rollout Data Unavailable</p>
-        <p className="text-xs text-slate-400 mt-1">
+      <div className="rounded-lg bg-bg-panel border border-bg-panel-border p-6 text-center text-ink-muted">
+        <AlertCircle className="w-6 h-6 text-signal-gold mx-auto mb-2" />
+        <p className="font-medium text-ink font-body text-sm">Attention Rollout Data Unavailable</p>
+        <p className="text-xs text-ink-muted mt-1 font-body">
           Time-aligned attention weights were not computed or could not be decoded for this screening session.
         </p>
       </div>
     );
   }
 
-  // Get color for attention value [0, 1]
-  const getAttentionColor = (weight: number): string => {
-    const normalized = Math.min(Math.max(weight / maxWeight, 0), 1);
-    if (normalized > 0.75) return '#ef4444'; // Crimson (High Salience)
-    if (normalized > 0.45) return '#f59e0b'; // Amber (Moderate Salience)
-    if (normalized > 0.20) return '#3b82f6'; // Blue (Low Salience)
-    return '#94a3b8'; // Slate (Baseline / Low Salience)
+  // Signal-Gold intensity palette (avoids misleading red-yellow-green severity scale)
+  const getGoldIntensityColor = (weight: number): string => {
+    const norm = Math.min(Math.max(weight / maxWeight, 0), 1);
+    if (norm > 0.80) return 'rgba(217, 165, 92, 1.0)';     // Full Luminous Gold (Peak Salience)
+    if (norm > 0.55) return 'rgba(217, 165, 92, 0.75)';    // High Gold Salience
+    if (norm > 0.30) return 'rgba(217, 165, 92, 0.45)';    // Moderate Gold Salience
+    if (norm > 0.15) return 'rgba(217, 165, 92, 0.25)';    // Low Gold Salience
+    return 'rgba(217, 165, 92, 0.12)';                    // Baseline Salience
   };
 
-  const totalDuration = audioDurationSec || (timestamps[timestamps.length - 1] ?? 4.0);
   const hoveredTimestamp = hoveredIndex !== null ? timestamps[hoveredIndex] : null;
   const hoveredWeight = hoveredIndex !== null ? attentionWeights[hoveredIndex] : null;
 
+  const currentPlayPct = totalDuration > 0 ? (currentTime / totalDuration) * 100 : 0;
+  const peakPct = totalDuration > 0 ? (peakTimestamp / totalDuration) * 100 : 0;
+
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-card p-6">
+    <div className="bg-bg-panel rounded-lg border border-bg-panel-border shadow-panel p-6">
       {/* Header with Title and Peak Badge */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-100">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-4 border-b border-bg-panel-border">
         <div>
-          <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-blue-600" />
-            Time-Aligned Attention Rollout Heatmap
+          <h3 className="text-base font-display font-medium text-ink flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-signal-gold" />
+            <span>Time-Aligned Attention Rollout Heatmap</span>
           </h3>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Temporal acoustic salience across multi-layer transformer attention heads
+          <p className="text-xs text-ink-muted font-body mt-0.5">
+            Temporal acoustic salience across self-supervised multi-layer transformer attention heads
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
-            <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded text-xs font-mono font-medium bg-bg-void text-signal-gold border border-signal-gold/30">
+            <span className="w-1.5 h-1.5 rounded-full bg-signal-gold animate-pulse" />
             Peak Salience: {peakTimestamp.toFixed(2)}s
           </span>
         </div>
       </div>
 
-      {/* Interactive Bar Chart Visualization */}
+      {/* Audio Playback Sync Bar (if audioUrl provided) */}
+      {audioUrl && (
+        <div className="mb-4 p-3 rounded bg-bg-void border border-bg-panel-border flex items-center justify-between gap-4">
+          <audio
+            ref={audioRef}
+            src={audioUrl}
+            onTimeUpdate={handleTimeUpdate}
+            onEnded={handleAudioEnded}
+            className="hidden"
+          />
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={togglePlayPause}
+              className="w-8 h-8 rounded bg-signal-gold hover:bg-signal-gold-hover text-bg-void flex items-center justify-center transition-colors focus-visible:ring-2 focus-visible:ring-signal-gold focus-visible:outline-none"
+              aria-label={isPlaying ? 'Pause playback' : 'Play audio synced with heatmap'}
+            >
+              {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
+            </button>
+            <button
+              type="button"
+              onClick={restartAudio}
+              className="p-1.5 rounded text-ink-muted hover:text-ink transition-colors"
+              aria-label="Restart audio from beginning"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+            </button>
+            <span className="text-xs font-mono text-ink">
+              {currentTime.toFixed(2)}s / {totalDuration.toFixed(2)}s
+            </span>
+          </div>
+          <span className="text-xs text-ink-muted font-body hidden sm:inline-block">
+            Playback synchronized with attention timeline
+          </span>
+        </div>
+      )}
+
+      {/* Interactive Heatmap Intensity Rollout */}
       <div className="relative pt-6 pb-2">
         {/* Hover Inspector Tooltip */}
         {hoveredIndex !== null && hoveredTimestamp !== null && hoveredWeight !== null && (
           <div
-            className="absolute top-0 transform -translate-x-1/2 z-20 bg-slate-900 text-white text-[11px] font-mono px-2.5 py-1 rounded shadow-lg pointer-events-none flex items-center gap-2 border border-slate-700"
+            className="absolute top-0 transform -translate-x-1/2 z-20 bg-bg-panel-elevated text-ink text-[11px] font-mono px-2.5 py-1 rounded shadow-panel pointer-events-none flex items-center gap-2 border border-bg-panel-border"
             style={{
               left: `${(hoveredIndex / (timestamps.length - 1)) * 100}%`,
             }}
           >
-            <span>Time: <strong>{hoveredTimestamp.toFixed(2)}s</strong></span>
-            <span>Weight: <strong>{hoveredWeight.toFixed(3)}</strong></span>
+            <span>Time: <strong className="text-signal-gold">{hoveredTimestamp.toFixed(2)}s</strong></span>
+            <span>Weight: <strong className="text-ink">{hoveredWeight.toFixed(3)}</strong></span>
           </div>
         )}
 
         {/* Visual Heatmap Bars */}
         <div
-          className="h-28 flex items-end gap-[1px] bg-slate-900 rounded-xl p-3 relative overflow-hidden border border-slate-800"
+          className="h-28 flex items-end gap-[1px] bg-bg-void rounded p-3 relative overflow-hidden border border-bg-panel-border"
           onMouseLeave={() => setHoveredIndex(null)}
         >
           {attentionWeights.map((weight, idx) => {
-            const heightPct = Math.max((weight / maxWeight) * 100, 4);
-            const color = getAttentionColor(weight);
+            const heightPct = Math.max((weight / maxWeight) * 100, 6);
+            const color = getGoldIntensityColor(weight);
             const isHovered = hoveredIndex === idx;
 
             return (
@@ -121,7 +199,7 @@ export const AttentionHeatmap: React.FC<AttentionHeatmapProps> = ({
               >
                 <div
                   className={`w-full rounded-t-xs transition-all ${
-                    isHovered ? 'brightness-125 scale-y-105' : 'opacity-85 hover:opacity-100'
+                    isHovered ? 'brightness-125 scale-y-105' : 'opacity-90 hover:opacity-100'
                   }`}
                   style={{
                     height: `${heightPct}%`,
@@ -135,18 +213,30 @@ export const AttentionHeatmap: React.FC<AttentionHeatmapProps> = ({
           {/* Peak Timestamp Marker Line */}
           {timestamps.length > 0 && (
             <div
-              className="absolute top-0 bottom-0 w-[2px] bg-red-400 z-10 pointer-events-none shadow-[0_0_8px_rgba(239,68,68,0.8)]"
+              className="absolute top-0 bottom-0 w-[2px] bg-signal-gold z-10 pointer-events-none shadow-[0_0_8px_rgba(217,165,92,0.8)]"
               style={{
-                left: `${(peakTimestamp / totalDuration) * 100}%`,
+                left: `${peakPct}%`,
               }}
             >
-              <span className="absolute -top-1 -left-1 w-2.5 h-2.5 rounded-full bg-red-500" />
+              <span className="absolute -top-1 -left-1 w-2.5 h-2.5 rounded-full bg-signal-gold" />
+            </div>
+          )}
+
+          {/* Playback Current Position Marker Line */}
+          {audioUrl && isPlaying && (
+            <div
+              className="absolute top-0 bottom-0 w-[2px] bg-signal-blue z-20 pointer-events-none shadow-[0_0_8px_rgba(94,124,226,0.9)]"
+              style={{
+                left: `${currentPlayPct}%`,
+              }}
+            >
+              <span className="absolute -top-1 -left-1 w-2.5 h-2.5 rounded-full bg-signal-blue" />
             </div>
           )}
         </div>
 
         {/* Time Axis Markers */}
-        <div className="flex justify-between items-center text-[10px] font-mono text-slate-400 mt-2 px-1">
+        <div className="flex justify-between items-center text-[10px] font-mono text-ink-muted mt-2 px-1">
           <span>0.0s</span>
           <span>{(totalDuration * 0.25).toFixed(1)}s</span>
           <span>{(totalDuration * 0.50).toFixed(1)}s</span>
@@ -155,38 +245,36 @@ export const AttentionHeatmap: React.FC<AttentionHeatmapProps> = ({
         </div>
       </div>
 
-      {/* Heatmap Color Scale Legend */}
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-4 pt-3 border-t border-slate-100 text-xs">
+      {/* Heatmap Intensity Scale Legend */}
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-4 pt-3 border-t border-bg-panel-border text-xs">
         <div className="flex items-center gap-4">
-          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Acoustic Salience:</span>
-          <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1.5 text-slate-600 text-[11px]">
-              <span className="w-2.5 h-2.5 rounded-xs bg-slate-400" /> Baseline / Low
+          <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider font-body">
+            Signal Salience:
+          </span>
+          <div className="flex items-center gap-3 font-body">
+            <span className="flex items-center gap-1.5 text-ink-muted text-[11px]">
+              <span className="w-2.5 h-2.5 rounded-xs" style={{ backgroundColor: 'rgba(217, 165, 92, 0.15)' }} /> Baseline
             </span>
-            <span className="flex items-center gap-1.5 text-slate-600 text-[11px]">
-              <span className="w-2.5 h-2.5 rounded-xs bg-blue-500" /> Minor Influence
+            <span className="flex items-center gap-1.5 text-ink-muted text-[11px]">
+              <span className="w-2.5 h-2.5 rounded-xs" style={{ backgroundColor: 'rgba(217, 165, 92, 0.45)' }} /> Moderate
             </span>
-            <span className="flex items-center gap-1.5 text-slate-600 text-[11px]">
-              <span className="w-2.5 h-2.5 rounded-xs bg-amber-500" /> Moderate
-            </span>
-            <span className="flex items-center gap-1.5 text-slate-600 text-[11px]">
-              <span className="w-2.5 h-2.5 rounded-xs bg-red-500" /> Peak Influence
+            <span className="flex items-center gap-1.5 text-ink-muted text-[11px]">
+              <span className="w-2.5 h-2.5 rounded-xs bg-signal-gold" /> Peak Focus
             </span>
           </div>
         </div>
 
-        <div className="text-[11px] text-slate-500 font-mono flex items-center gap-1.5">
-          <Clock className="w-3.5 h-3.5 text-slate-400" />
+        <div className="text-[11px] text-ink-faint font-mono flex items-center gap-1.5">
+          <Clock className="w-3.5 h-3.5" />
           <span>{timestamps.length} acoustic frames</span>
         </div>
       </div>
 
       {/* Mandatory Scientific Limitation Notice */}
-      <div className="mt-4 p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-start gap-2.5 text-slate-600 text-xs leading-relaxed">
-        <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+      <div className="mt-4 p-3.5 rounded bg-bg-void border border-bg-panel-border flex items-start gap-2.5 text-ink-muted text-xs leading-relaxed font-body">
+        <Info className="w-4 h-4 text-signal-gold shrink-0 mt-0.5" />
         <p>
-          <strong>Explainability Limitation:</strong> This shows which parts of the recording most influenced the model&rsquo;s output.
-          It is an algorithmic visualization of self-attention weights and is <strong>not a certified clinical or anatomical measurement</strong>.
+          <strong className="text-ink font-medium">Explainability Notice:</strong> This visualization reflects algorithmic self-attention salience across multi-layer transformer heads. It demonstrates which temporal phonation windows most influenced the model&rsquo;s statistical confidence, and is <strong>not an anatomical or diagnostic clinical measurement</strong>.
         </p>
       </div>
     </div>

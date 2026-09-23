@@ -109,28 +109,28 @@ export const Result: React.FC = () => {
         title="Screening Results"
         subtitle="Inspect acoustic neural predictions and time-aligned attention rollout."
       >
-        <div className="bg-white rounded-2xl border border-slate-200 p-10 shadow-card text-center max-w-xl mx-auto">
-          <div className="w-14 h-14 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center mx-auto mb-4">
-            <AudioWaveform className="w-7 h-7" />
+        <div className="bg-bg-panel rounded-lg border border-bg-panel-border p-10 shadow-panel text-center max-w-xl mx-auto">
+          <div className="w-12 h-12 rounded-full bg-bg-void text-signal-gold flex items-center justify-center mx-auto mb-4 border border-bg-panel-border">
+            <AudioWaveform className="w-6 h-6" />
           </div>
-          <h2 className="text-lg font-bold text-slate-900 mb-2">No Screening Record Selected</h2>
-          <p className="text-sm text-slate-600 mb-6">
+          <h2 className="text-lg font-display font-medium text-ink mb-2">No Screening Record Selected</h2>
+          <p className="text-sm text-ink-muted mb-6 font-body leading-relaxed">
             Please perform a live microphone phonation recording or upload an audio file to evaluate acoustic risk.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
               to="/record"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-sm transition-all"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded bg-signal-gold hover:bg-signal-gold-hover text-bg-void font-semibold text-xs font-body shadow-glow-gold transition-all"
             >
               <Mic className="w-4 h-4" />
-              Live Record
+              <span>Live Record</span>
             </Link>
             <Link
               to="/upload"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-sm transition-colors"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded bg-bg-panel-elevated hover:bg-bg-panel-border text-ink font-medium text-xs font-body border border-bg-panel-border transition-colors"
             >
-              <UploadCloud className="w-4 h-4" />
-              Upload Audio
+              <UploadCloud className="w-4 h-4 text-ink-muted" />
+              <span>Upload Audio</span>
             </Link>
           </div>
         </div>
@@ -141,10 +141,10 @@ export const Result: React.FC = () => {
   if (loading) {
     return (
       <PageContainer title="Loading Screening Record...">
-        <div className="bg-white rounded-2xl border border-slate-200 p-12 shadow-card text-center max-w-lg mx-auto">
-          <Activity className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-3" />
-          <p className="text-sm font-semibold text-slate-800">Retrieving Acoustic Screening Record</p>
-          <p className="text-xs text-slate-400 mt-1 font-mono">{id}</p>
+        <div className="bg-bg-panel rounded-lg border border-bg-panel-border p-12 shadow-panel text-center max-w-lg mx-auto">
+          <Activity className="w-8 h-8 text-signal-gold animate-spin mx-auto mb-3" />
+          <p className="text-sm font-semibold text-ink font-body">Retrieving Acoustic Screening Record</p>
+          <p className="text-xs text-ink-muted mt-1 font-mono">{id}</p>
         </div>
       </PageContainer>
     );
@@ -153,28 +153,28 @@ export const Result: React.FC = () => {
   if (error || !record) {
     return (
       <PageContainer title="Screening Record Error">
-        <div className="bg-white rounded-2xl border border-red-200 p-8 shadow-card max-w-xl mx-auto text-center">
-          <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-3">
+        <div className="bg-bg-panel rounded-lg border border-risk-elevated/40 p-8 shadow-panel max-w-xl mx-auto text-center">
+          <div className="w-12 h-12 rounded-full bg-risk-elevated/15 text-risk-elevated flex items-center justify-center mx-auto mb-3 border border-risk-elevated/30">
             <AlertTriangle className="w-6 h-6" />
           </div>
-          <h2 className="text-lg font-bold text-slate-900 mb-2">Unable to Load Record</h2>
-          <p className="text-xs text-red-800 bg-red-50 p-3 rounded-lg border border-red-200 mb-6 text-left font-mono">
+          <h2 className="text-lg font-display font-medium text-ink mb-2">Unable to Load Record</h2>
+          <p className="text-xs text-ink-muted bg-bg-void p-3 rounded border border-bg-panel-border mb-6 text-left font-mono">
             {error || 'Record data is empty.'}
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <button
               onClick={() => fetchRecord(id)}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition-all"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded bg-signal-gold hover:bg-signal-gold-hover text-bg-void font-semibold text-xs font-body transition-all"
             >
               <RotateCcw className="w-4 h-4" />
-              Retry Retrieval
+              <span>Retry Retrieval</span>
             </button>
             <Link
               to="/history"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-sm transition-colors"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded bg-bg-panel-elevated hover:bg-bg-panel-border text-ink font-medium text-xs font-body border border-bg-panel-border transition-colors"
             >
               <History className="w-4 h-4" />
-              View History
+              <span>View History</span>
             </Link>
           </div>
         </div>
@@ -189,34 +189,34 @@ export const Result: React.FC = () => {
 
   return (
     <PageContainer
-      title="Acoustic Screening Result &amp; Explainability"
+      title="Acoustic Screening Result"
       subtitle={`Session ID: ${record.id} • Analyzed on ${new Date(record.created_at).toLocaleString()}`}
       actions={
         <div className="flex items-center gap-2.5">
           <Link
             to="/record"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-slate-300 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors shadow-subtle"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded bg-bg-panel border border-bg-panel-border text-ink-muted hover:text-ink text-xs font-body font-medium transition-colors"
           >
-            <Mic className="w-3.5 h-3.5" />
-            New Recording
+            <Mic className="w-3.5 h-3.5 text-signal-gold" />
+            <span>New Recording</span>
           </Link>
           <Link
             to="/history"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-slate-300 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors shadow-subtle"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded bg-bg-panel border border-bg-panel-border text-ink-muted hover:text-ink text-xs font-body font-medium transition-colors"
           >
             <History className="w-3.5 h-3.5" />
-            History
+            <span>History</span>
           </Link>
         </div>
       }
     >
-      <div className="max-w-5xl mx-auto space-y-6">
-        {/* Primary Prediction Outcome Card */}
+      <div className="space-y-6">
+        {/* Primary Prediction Outcome Card (Flat bg-panel, hairline border, explicit text + color pairing) */}
         <div
-          className={`rounded-2xl border p-6 sm:p-8 shadow-card transition-all ${
+          className={`rounded-lg border p-6 sm:p-8 shadow-panel transition-all ${
             isElevatedRisk
-              ? 'bg-gradient-to-br from-red-50/70 via-white to-white border-red-200'
-              : 'bg-gradient-to-br from-emerald-50/70 via-white to-white border-emerald-200'
+              ? 'bg-bg-panel border-risk-elevated/40'
+              : 'bg-bg-panel border-risk-low/40'
           }`}
         >
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -224,118 +224,118 @@ export const Result: React.FC = () => {
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 {isElevatedRisk ? (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-300">
-                    <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded text-xs font-mono font-semibold bg-risk-elevated/15 text-risk-elevated border border-risk-elevated/40">
+                    <span className="w-2 h-2 rounded-full bg-risk-elevated animate-pulse" />
                     ELEVATED ACOUSTIC RISK INDICATED
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                    <span className="w-2 h-2 rounded-full bg-emerald-600" />
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded text-xs font-mono font-semibold bg-risk-low/15 text-risk-low border border-risk-low/40">
+                    <span className="w-2 h-2 rounded-full bg-risk-low" />
                     LOW ACOUSTIC RISK INDICATED
                   </span>
                 )}
-                <span className="text-xs font-mono text-slate-500 uppercase px-2 py-0.5 rounded bg-slate-100 border border-slate-200">
+                <span className="text-xs font-mono text-ink-faint uppercase px-2 py-0.5 rounded bg-bg-void border border-bg-panel-border">
                   {record.source}
                 </span>
               </div>
 
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+              <h2 className="text-2xl sm:text-3xl font-display font-medium text-ink tracking-tight">
                 {isElevatedRisk
                   ? "Voice Pattern Shows Parkinson's-Risk Indicators"
                   : "Voice Pattern Consistent with Lower Parkinson's-Risk Indicators"}
               </h2>
 
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-2xl">
+              <p className="text-xs sm:text-sm text-ink-muted font-body leading-relaxed max-w-2xl font-normal">
                 {isElevatedRisk
                   ? "The neural network detected acoustic feature perturbations (such as fundamental frequency fluctuations and hypophonic variance) characteristic of elevated risk."
                   : "The neural network detected stable harmonic ratios, steady fundamental frequency, and vocal loudness consistent with normal baseline ranges."}
               </p>
             </div>
 
-            {/* Probability Score Pill / Callout */}
-            <div className="flex flex-col items-center justify-center p-5 rounded-2xl bg-white border border-slate-200 shadow-sm shrink-0 min-w-[200px]">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+            {/* Probability Score Pill */}
+            <div className="flex flex-col items-center justify-center p-5 rounded bg-bg-void border border-bg-panel-border shadow-inner shrink-0 min-w-[210px]">
+              <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider mb-1 font-body">
                 Risk Probability Score
               </span>
               <div className="flex items-baseline gap-1">
                 <span
-                  className={`text-4xl sm:text-5xl font-extrabold tracking-tight font-mono ${
-                    isElevatedRisk ? 'text-red-600' : 'text-emerald-600'
+                  className={`text-4xl sm:text-5xl font-mono font-bold tracking-tight ${
+                    isElevatedRisk ? 'text-risk-elevated' : 'text-risk-low'
                   }`}
                 >
                   {probPercent}%
                 </span>
               </div>
-              <div className="mt-2 w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+              <div className="mt-2 w-full bg-bg-panel rounded-full h-1.5 overflow-hidden border border-bg-panel-border">
                 <div
                   className={`h-full transition-all duration-1000 ${
-                    isElevatedRisk ? 'bg-red-500' : 'bg-emerald-500'
+                    isElevatedRisk ? 'bg-risk-elevated' : 'bg-risk-low'
                   }`}
                   style={{ width: `${probPercent}%` }}
                 />
               </div>
-              <span className="text-[10px] text-slate-400 mt-1.5 font-mono">
-                Threshold: {threshPercent}%
+              <span className="text-[10px] text-ink-muted mt-1.5 font-mono">
+                Decision Threshold: {threshPercent}%
               </span>
             </div>
           </div>
 
           {/* Session Metadata Grid */}
-          <div className="mt-6 pt-5 border-t border-slate-200/80 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+          <div className="mt-6 pt-5 border-t border-bg-panel-border grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs font-body">
             <div>
-              <span className="text-slate-400 block text-[11px]">Patient / Test Ref:</span>
-              <span className="font-semibold text-slate-800 flex items-center gap-1 mt-0.5">
-                <User className="w-3.5 h-3.5 text-slate-400" />
+              <span className="text-ink-faint block text-[11px]">Patient / Test Ref:</span>
+              <span className="font-medium text-ink flex items-center gap-1 mt-0.5 font-mono">
+                <User className="w-3.5 h-3.5 text-signal-gold" />
                 {record.test_id || 'Not specified'}
               </span>
             </div>
             <div>
-              <span className="text-slate-400 block text-[11px]">Audio Duration:</span>
-              <span className="font-semibold text-slate-800 font-mono mt-0.5 block">
+              <span className="text-ink-faint block text-[11px]">Audio Duration:</span>
+              <span className="font-medium text-ink font-mono mt-0.5 block">
                 {record.audio_duration_sec.toFixed(2)} seconds
               </span>
             </div>
             <div>
-              <span className="text-slate-400 block text-[11px]">Model Checkpoint:</span>
-              <span className="font-semibold text-slate-800 font-mono mt-0.5 block truncate">
+              <span className="text-ink-faint block text-[11px]">Model Checkpoint:</span>
+              <span className="font-medium text-ink font-mono mt-0.5 block truncate">
                 {record.model_version}
               </span>
             </div>
             <div>
-              <span className="text-slate-400 block text-[11px]">Screening Date:</span>
-              <span className="font-semibold text-slate-800 flex items-center gap-1 mt-0.5">
-                <Calendar className="w-3.5 h-3.5 text-slate-400" />
+              <span className="text-ink-faint block text-[11px]">Screening Date:</span>
+              <span className="font-medium text-ink flex items-center gap-1 mt-0.5 font-mono">
+                <Calendar className="w-3.5 h-3.5 text-signal-blue" />
                 {new Date(record.created_at).toLocaleDateString()}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Explainability Callout */}
-        <div className="p-4 rounded-xl bg-blue-50/70 border border-blue-200 text-xs text-blue-950 flex items-start gap-3">
-          <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+        {/* Explainability Meaning Callout */}
+        <div className="p-4 rounded bg-bg-panel border border-signal-blue/30 text-xs text-ink-muted flex items-start gap-3 font-body">
+          <Info className="w-4 h-4 text-signal-blue shrink-0 mt-0.5" />
           <p className="leading-relaxed">
-            <strong>Understanding This Score:</strong> The probability score reflects the neural model&rsquo;s statistical confidence based on acoustic self-supervised feature embeddings. It is <strong>not a medical certainty or a formal clinical diagnosis</strong>.
+            <strong className="text-ink font-medium">Understanding This Metric:</strong> The probability score reflects the neural model&rsquo;s statistical confidence based on acoustic self-supervised feature embeddings. It is <strong>a learned-pattern signal, not medical certainty or a formal clinical diagnosis</strong>.
           </p>
         </div>
 
-        {/* Time-Aligned Attention Rollout Heatmap */}
+        {/* Time-Aligned Attention Rollout Heatmap with Signal-Gold Intensity */}
         <AttentionHeatmap
           attentionData={attentionData}
           audioDurationSec={record.audio_duration_sec}
         />
 
         {/* Report Generation Action Card */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-card p-6 sm:p-8">
+        <div className="bg-bg-panel rounded-lg border border-bg-panel-border shadow-panel p-6 sm:p-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
             <div>
-              <div className="flex items-center gap-2 mb-1">
-                <FileText className="w-5 h-5 text-blue-600" />
-                <h3 className="text-lg font-bold text-slate-900">
+              <div className="flex items-center gap-2 mb-1.5">
+                <FileText className="w-5 h-5 text-signal-gold" />
+                <h3 className="text-lg font-display font-medium text-ink">
                   Comprehensive Clinical Decision Support Report
                 </h3>
               </div>
-              <p className="text-xs sm:text-sm text-slate-600 max-w-2xl leading-relaxed">
+              <p className="text-xs sm:text-sm text-ink-muted max-w-2xl leading-relaxed font-body">
                 Synthesize this acoustic screening outcome with retrieved medical literature citations (hypophonia, pitch variance, acoustic biomarkers) and safety-reviewed narrative explanations.
               </p>
             </div>
@@ -344,21 +344,21 @@ export const Result: React.FC = () => {
               {record.has_report ? (
                 <Link
                   to={`/report/${record.id}`}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm shadow-md transition-all active:scale-95"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded bg-risk-low hover:bg-emerald-600 text-bg-void font-semibold text-xs font-body shadow-sm transition-all"
                 >
                   <FileText className="w-4 h-4" />
-                  View Synthesized Report
+                  <span>View Synthesized Report</span>
                 </Link>
               ) : (
                 <button
                   type="button"
                   onClick={handleGenerateReport}
                   disabled={isGeneratingReport}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-md transition-all active:scale-95 disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded bg-signal-gold hover:bg-signal-gold-hover text-bg-void font-semibold text-xs font-body shadow-glow-gold transition-all active:scale-95 disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-signal-gold focus-visible:outline-none"
                 >
                   {isGeneratingReport ? (
                     <>
-                      <Activity className="w-4 h-4 animate-spin" />
+                      <Activity className="w-4 h-4 animate-spin text-bg-void" />
                       <span>Synthesizing Clinical Report...</span>
                     </>
                   ) : (
@@ -372,15 +372,15 @@ export const Result: React.FC = () => {
             </div>
           </div>
 
-          {/* Report Generation Error Alert (Handles 503 LLM Unavailable Gracefully) */}
+          {/* Report Generation Error Alert (503 LLM Unavailable Guidance) */}
           {reportError && (
-            <div className="mt-5 p-4 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 text-xs flex items-start gap-3">
-              <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <p className="font-bold text-sm text-amber-900">Report Synthesis Advisory</p>
-                <p className="leading-relaxed">{reportError}</p>
-                <p className="text-[11px] text-amber-800 pt-1">
-                  Tip: A free LLM API key can be obtained instantly from <a href="https://console.groq.com" target="_blank" rel="noopener noreferrer" className="underline font-semibold">Groq Console</a> or <a href="https://aistudio.google.com" target="_blank" rel="noopener noreferrer" className="underline font-semibold">Google AI Studio</a>. Set <code className="font-mono bg-amber-100 px-1 py-0.5 rounded">LLM_API_KEY</code> in <code className="font-mono bg-amber-100 px-1 py-0.5 rounded">.env</code>.
+            <div className="mt-5 p-4 rounded bg-risk-caution/10 border border-risk-caution/30 text-ink text-xs flex items-start gap-3">
+              <ShieldAlert className="w-5 h-5 text-risk-caution shrink-0 mt-0.5" />
+              <div className="space-y-1 font-body">
+                <p className="font-semibold text-sm text-risk-caution">Report Synthesis Advisory</p>
+                <p className="leading-relaxed text-ink-muted">{reportError}</p>
+                <p className="text-[11px] text-ink-faint pt-1">
+                  Tip: A free LLM API key can be obtained instantly from <a href="https://console.groq.com" target="_blank" rel="noopener noreferrer" className="underline text-signal-gold">Groq Console</a> or <a href="https://aistudio.google.com" target="_blank" rel="noopener noreferrer" className="underline text-signal-gold">Google AI Studio</a>. Set <code className="font-mono bg-bg-void px-1 py-0.5 rounded text-signal-gold border border-bg-panel-border">LLM_API_KEY</code> in <code className="font-mono bg-bg-void px-1 py-0.5 rounded text-signal-gold border border-bg-panel-border">.env</code>.
                 </p>
               </div>
             </div>
@@ -388,10 +388,10 @@ export const Result: React.FC = () => {
         </div>
 
         {/* Fixed Non-Dismissible Bottom Disclaimer */}
-        <div className="p-4 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-600 flex items-start gap-2.5">
-          <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+        <div className="p-4 rounded bg-bg-panel/60 border border-bg-panel-border text-xs text-ink-muted flex items-start gap-2.5 font-body">
+          <ShieldAlert className="w-4 h-4 text-signal-gold shrink-0 mt-0.5" />
           <p className="leading-relaxed">
-            <strong>Medical Notice:</strong> This acoustic screening evaluation is strictly intended as a Clinical Decision Support research tool. It cannot confirm or rule out the presence of Parkinson&rsquo;s disease. A formal neurological evaluation is required for diagnosis.
+            <strong className="text-ink font-medium">Medical Notice:</strong> This acoustic screening evaluation is strictly intended as a Clinical Decision Support research tool. It cannot confirm or rule out the presence of Parkinson&rsquo;s disease. A formal neurological evaluation is required for diagnosis.
           </p>
         </div>
       </div>
