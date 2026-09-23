@@ -1,10 +1,14 @@
-"""Backend business logic, ML, and RAG retrieval services package."""
+"""Backend business logic, ML, RAG retrieval, and LLM services package."""
 
 from backend.app.services.audio_validation import validate_audio_file
 from backend.app.services.inference import (
     InferenceService,
     PredictionResult,
     get_inference_service,
+)
+from backend.app.services.llm import (
+    LLMService,
+    get_llm_service,
 )
 from backend.app.services.rag import (
     RAGService,
@@ -20,4 +24,6 @@ __all__ = [
     "RAGService",
     "RetrievedChunk",
     "get_rag_service",
+    "LLMService",
+    "get_llm_service",
 ]

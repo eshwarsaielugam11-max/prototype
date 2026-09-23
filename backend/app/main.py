@@ -18,6 +18,7 @@ from backend.app.api.health import router as health_router
 from backend.app.config import Settings, get_settings
 from backend.app.db.init_db import init_db
 from backend.app.services.inference import InferenceService
+from backend.app.services.llm import LLMService
 from backend.app.services.rag import RAGService
 
 
@@ -74,6 +75,29 @@ async def lifespan(app: FastAPI):
             e,
         )
         app.state.rag_service = None
+
+    # Initialize LLMService and perform non-fatal availability check
+    try:
+        logger.info("Checking local Ollama LLM availability...")
+        llm_service = LLMService()
+        is_available, status_msg = llm_service.check_availability()
+        app.state.llm_service = llm_service
+        app.state.llm_available = is_available
+        if is_available:
+            logger.info("Ollama LLM is operational: %s", status_msg)
+        else:
+            logger.warning(
+                "Ollama LLM is currently unavailable: %s. "
+                "Clinical report synthesis endpoints will degrade gracefully with an advisory notice.",
+                status_msg,
+            )
+    except Exception as e:
+        logger.warning(
+            "Unexpected error while verifying Ollama LLM availability: %s. Setting app.state.llm_available = False.",
+            e,
+        )
+        app.state.llm_service = None
+        app.state.llm_available = False
 
     yield
 
