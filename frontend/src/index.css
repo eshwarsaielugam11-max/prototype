@@ -14,7 +14,18 @@
   }
 
   body {
-    @apply bg-void text-ink font-body min-h-screen antialiased selection:bg-signal-gold/20 selection:text-signal-gold relative;
+    background-color: #06070C;
+    color: #F4F1E9;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    min-height: 100vh;
+    position: relative;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background-color: rgba(217, 165, 92, 0.2);
+    color: #D9A55C;
   }
 
   /* Global subtle organic noise/grain overlay (~3% opacity) to eliminate digital-black banding */
@@ -34,7 +45,8 @@
 
   /* Accessible keyboard navigation: high-contrast signal-gold focus rings */
   *:focus-visible {
-    @apply outline-none ring-2 ring-signal-gold ring-offset-2 ring-offset-bg-void;
+    outline: 2px solid #D9A55C;
+    outline-offset: 2px;
   }
 
   /* Global prefers-reduced-motion: disable non-essential transitions and animations */
