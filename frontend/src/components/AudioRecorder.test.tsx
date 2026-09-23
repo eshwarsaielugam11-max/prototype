@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { AudioRecorder } from './AudioRecorder';
-import * as clientApi from '../api/client';
 
 describe('AudioRecorder Component', () => {
   beforeEach(() => {

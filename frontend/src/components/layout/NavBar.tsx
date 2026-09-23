@@ -1,69 +1,98 @@
-import React from 'react';
-import { NavLink, Link } from 'react-router-dom';
-import { Activity, Mic, UploadCloud, BarChart3, FileText, History } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { NavLink, Link, useLocation } from 'react-router-dom';
+import { Mic, UploadCloud, History, ArrowRight } from 'lucide-react';
 
-interface NavItem {
+interface NavLinkItem {
   name: string;
   path: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon?: React.ComponentType<{ className?: string }>;
 }
 
-const navItems: NavItem[] = [
-  { name: 'Home', path: '/', icon: Activity },
-  { name: 'Live Record', path: '/record', icon: Mic },
-  { name: 'Upload Audio', path: '/upload', icon: UploadCloud },
-  { name: 'Screening Result', path: '/result', icon: BarChart3 },
-  { name: 'Clinical Report', path: '/report', icon: FileText },
+const navLinks: NavLinkItem[] = [
+  { name: 'Record', path: '/record', icon: Mic },
+  { name: 'Upload', path: '/upload', icon: UploadCloud },
   { name: 'History', path: '/history', icon: History },
 ];
 
 export const NavBar: React.FC = () => {
+  const [isScrolled, setIsScrolled] = useState<boolean>(false);
+  const location = useLocation();
+  const isHome = location.pathname === '/';
+
+  useEffect(() => {
+    // Monitor scroll to transition from transparent-over-hero to solid bg-panel
+    const handleScroll = () => {
+      if (window.scrollY > 30) {
+        setIsScrolled(true);
+      } else {
+        setIsScrolled(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll(); // Initial check
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
+  const navBackground = !isHome || isScrolled
+    ? 'bg-bg-panel/95 backdrop-blur-md border-b border-bg-panel-border shadow-panel'
+    : 'bg-transparent border-b border-transparent';
+
   return (
-    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-slate-200 shadow-subtle">
+    <header
+      className={`fixed top-0 left-0 right-0 z-50 transition-colors duration-200 ${navBackground}`}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Brand Logo & Title */}
-          <Link to="/" className="flex items-center gap-3 group focus:outline-none">
-            <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-sm transition-transform group-hover:scale-105">
-              <Activity className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-slate-900 tracking-tight text-base sm:text-lg">
-                  Parkinson's Voice Screening
-                </span>
-                <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
-                  Clinical CDS
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500 font-normal hidden sm:block">
-                Acoustic Biomarker Decision Support
-              </p>
-            </div>
+        <div className="flex items-center justify-between h-16 sm:h-20">
+          {/* Wordmark (Text only, editorial Fraunces & Inter hybrid) */}
+          <Link
+            to="/"
+            className="flex items-baseline gap-2.5 group rounded-sm py-1 focus-visible:ring-2 focus-visible:ring-signal-gold focus-visible:outline-none"
+            aria-label="Vocalis - Parkinson's Voice Screening Home"
+          >
+            <span className="font-display font-medium text-lg sm:text-xl text-ink tracking-tight group-hover:text-signal-gold transition-colors">
+              Vocalis
+            </span>
+            <span className="text-xs text-ink-muted font-body hidden sm:inline-block font-normal">
+              Acoustic Biomarker Screening
+            </span>
           </Link>
 
-          {/* Desktop Navigation Links */}
-          <nav className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto py-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  end={item.path === '/'}
-                  className={({ isActive }) =>
-                    `flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      isActive
-                        ? 'bg-blue-50 text-blue-700 font-semibold shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                    }`
-                  }
-                >
-                  <Icon className="w-4 h-4 shrink-0" />
-                  <span className="hidden md:inline">{item.name}</span>
-                </NavLink>
-              );
-            })}
+          {/* Navigation Links & Action */}
+          <nav className="flex items-center gap-2 sm:gap-6" aria-label="Main Navigation">
+            <div className="flex items-center gap-1 sm:gap-2">
+              {navLinks.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    className={({ isActive }) =>
+                      `px-3 py-1.5 rounded text-sm font-body transition-colors focus-visible:ring-2 focus-visible:ring-signal-gold focus-visible:outline-none flex items-center gap-1.5 ${
+                        isActive
+                          ? 'text-signal-gold font-medium bg-bg-panel-elevated border border-bg-panel-border'
+                          : 'text-ink-muted hover:text-ink hover:bg-bg-panel/60'
+                      }`
+                    }
+                  >
+                    {Icon && <Icon className="w-3.5 h-3.5 opacity-70" />}
+                    <span>{item.name}</span>
+                  </NavLink>
+                );
+              })}
+            </div>
+
+            {/* Filled Signal-Gold Action Button */}
+            <Link
+              to="/record"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded bg-signal-gold hover:bg-signal-gold-hover text-bg-void font-body text-xs sm:text-sm font-semibold shadow-glow-gold transition-all duration-150 focus-visible:ring-2 focus-visible:ring-signal-gold focus-visible:ring-offset-2 focus-visible:ring-offset-bg-void focus-visible:outline-none"
+            >
+              <span>Start Screening</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </nav>
         </div>
       </div>

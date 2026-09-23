@@ -6,6 +6,7 @@ interface PageContainerProps {
   subtitle?: string;
   actions?: React.ReactNode;
   className?: string;
+  maxWidth?: 'narrow' | 'standard' | 'wide' | 'full';
 }
 
 export const PageContainer: React.FC<PageContainerProps> = ({
@@ -14,19 +15,27 @@ export const PageContainer: React.FC<PageContainerProps> = ({
   subtitle,
   actions,
   className = '',
+  maxWidth = 'standard',
 }) => {
+  const maxWMap = {
+    narrow: 'max-w-4xl',
+    standard: 'max-w-6xl',
+    wide: 'max-w-7xl',
+    full: 'max-w-full',
+  };
+
   return (
-    <main className={`flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 ${className}`}>
+    <main className={`flex-1 w-full mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-28 pb-16 ${maxWMap[maxWidth]} ${className}`}>
       {(title || actions) && (
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-5">
-          <div>
+        <div className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 border-b border-bg-panel-border pb-6">
+          <div className="space-y-1.5">
             {title && (
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+              <h1 className="text-2xl sm:text-3xl font-display font-medium text-ink tracking-tight">
                 {title}
               </h1>
             )}
             {subtitle && (
-              <p className="mt-1.5 text-sm text-slate-600">
+              <p className="text-sm text-ink-muted font-body leading-relaxed max-w-2xl">
                 {subtitle}
               </p>
             )}

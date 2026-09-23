@@ -11,6 +11,7 @@ export type SourceType = 'recording' | 'upload';
 export interface AttentionHeatmapData {
   timestamps_sec: number[];
   attention: number[];
+  peak_timestamp_sec?: number;
   [key: string]: unknown;
 }
 
@@ -32,6 +33,7 @@ export interface EvidenceChunk {
   text: string;
   source_name: string;
   source_url: string | null;
+  similarity_score?: number;
 }
 
 export interface GeneratedExplanation {
@@ -60,7 +62,7 @@ export interface TestRecordListItem {
 }
 
 export interface TestRecordResponse extends TestRecordListItem {
-  attention_heatmap_json: string;
+  attention_heatmap_json: string | null;
   report_json: string | null;
 }
 

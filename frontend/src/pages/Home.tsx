@@ -1,175 +1,188 @@
 import React from 'react';
 import { PageContainer } from '../components/layout';
-import { Mic, UploadCloud, History, Activity, ShieldAlert, Cpu, Sparkles, FileText, CheckCircle2 } from 'lucide-react';
+import { Mic, UploadCloud, History, ShieldAlert, Cpu, Sparkles, FileText, CheckCircle2, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const Home: React.FC = () => {
   return (
-    <PageContainer>
-      {/* Hero Introduction */}
-      <div className="text-center max-w-3xl mx-auto mb-10">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-200 mb-4">
-          <Activity className="w-3.5 h-3.5" />
-          Acoustic Biomarker Decision Support System
+    <PageContainer maxWidth="wide">
+      {/* Hero: Voice Becoming Visible Signal */}
+      <section className="relative pt-6 pb-16 sm:pb-24 text-center max-w-4xl mx-auto overflow-hidden">
+        {/* Subtle Ambient Signal Glow in background */}
+        <div 
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[320px] bg-gradient-to-tr from-signal-gold/10 via-signal-blue/10 to-transparent blur-3xl pointer-events-none -z-10"
+          aria-hidden="true"
+        />
+
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-bg-panel border border-bg-panel-border text-xs text-signal-gold font-body mb-6 shadow-subtle">
+          <span className="w-1.5 h-1.5 rounded-full bg-signal-gold animate-pulse" />
+          <span>Acoustic Neural Screening &bull; Clinical CDS</span>
         </div>
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
-          Non-Invasive Vocal Biomarker Screening for Parkinson&rsquo;s Disease
+
+        {/* The Project's One Bold Gesture: Fraunces Italic Display Headline */}
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-light italic text-ink tracking-tight leading-[1.15] mb-6">
+          Voice becoming visible signal.
         </h1>
-        <p className="mt-4 text-base text-slate-600 leading-relaxed">
-          Leveraging self-supervised speech representations (<code className="font-mono text-xs bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded">WavLM</code>)
-          and time-aligned attention rollout to detect early acoustic markers associated with hypophonia and vocal dysregulation.
+
+        <p className="text-base sm:text-lg text-ink-muted font-body leading-relaxed max-w-2xl mx-auto mb-10 font-normal">
+          Non-invasive acoustic biomarker screening for Parkinson&rsquo;s disease. Translating subtle vocal fold perturbations into time-aligned neural attention patterns and grounded clinical evidence.
         </p>
 
         {/* Quick Action CTAs */}
-        <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-md mx-auto">
           <Link
             to="/record"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-md transition-all active:scale-95"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded bg-signal-gold hover:bg-signal-gold-hover text-bg-void font-body text-sm font-semibold shadow-glow-gold transition-all duration-150 focus-visible:ring-2 focus-visible:ring-signal-gold focus-visible:outline-none"
           >
             <Mic className="w-4 h-4" />
-            Start Live Voice Recording
+            <span>Start Live Phonation</span>
           </Link>
           <Link
             to="/upload"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 font-semibold text-sm border border-slate-300 shadow-sm transition-all active:scale-95"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded bg-bg-panel hover:bg-bg-panel-elevated text-ink font-body text-sm font-medium border border-bg-panel-border shadow-subtle transition-all duration-150 focus-visible:ring-2 focus-visible:ring-signal-gold focus-visible:outline-none"
           >
-            <UploadCloud className="w-4 h-4 text-slate-600" />
-            Upload Audio Recording
+            <UploadCloud className="w-4 h-4 text-ink-muted" />
+            <span>Upload Audio File</span>
           </Link>
         </div>
-      </div>
+      </section>
 
       {/* Prominent High-Visibility Medical Disclaimer Block */}
-      <div className="max-w-4xl mx-auto mb-12 p-5 sm:p-6 rounded-2xl bg-amber-50/80 border border-amber-200 shadow-sm">
+      <section className="max-w-4xl mx-auto mb-16 p-6 rounded bg-bg-panel border border-risk-caution/30 shadow-panel">
         <div className="flex items-start gap-4">
-          <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 border border-amber-300">
-            <ShieldAlert className="w-6 h-6" />
+          <div className="w-10 h-10 rounded bg-risk-caution/15 text-risk-caution flex items-center justify-center shrink-0 border border-risk-caution/30">
+            <ShieldAlert className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-sm font-bold text-amber-950 uppercase tracking-wider mb-1">
-              Important Clinical &amp; Research Disclaimer
+            <h2 className="text-xs font-body font-semibold text-signal-gold uppercase tracking-wider mb-1.5">
+              Mandatory Clinical &amp; Research Disclaimer
             </h2>
-            <p className="text-sm text-amber-900 leading-relaxed">
-              <strong>This is a research screening tool. It does not diagnose Parkinson&rsquo;s disease.</strong>{' '}
-              Acoustic screening provides an automated, non-invasive risk indicator based on vocal acoustic stability.
-              Vocal variations may also occur due to respiratory infections, fatigue, aging, or unrelated vocal fold conditions.
-              Consult a qualified healthcare professional or neurologist for any clinical concerns or formal neurological diagnosis.
+            <p className="text-sm text-ink-muted font-body leading-relaxed">
+              <strong className="text-ink font-medium">This is a research screening tool. It does not diagnose Parkinson&rsquo;s disease.</strong>{' '}
+              Acoustic screening computes self-supervised risk probabilities based on vocal stability. Acoustic deviations can also stem from fatigue, respiratory illness, normal aging, or benign dysphonia. Consult a licensed neurologist for clinical evaluation and diagnostic confirmation.
             </p>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* How It Works - 4 Step Pipeline */}
-      <div className="max-w-5xl mx-auto mb-14">
-        <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold text-slate-900">How the Screening Pipeline Works</h2>
-          <p className="text-sm text-slate-500 mt-1">End-to-end transparent, explainable decision support architecture</p>
+      <section className="max-w-5xl mx-auto mb-16">
+        <div className="text-center mb-10">
+          <h2 className="text-2xl sm:text-3xl font-display font-medium text-ink tracking-tight">
+            How the Screening Pipeline Operates
+          </h2>
+          <p className="text-sm text-ink-muted font-body mt-2">
+            Transparent, multi-stage decision support from raw audio waveform to synthesized literature review.
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Step 1 */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-subtle flex flex-col">
-            <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-sm mb-3">
-              1
+          <div className="bg-bg-panel p-5 rounded border border-bg-panel-border shadow-panel flex flex-col">
+            <div className="w-7 h-7 rounded bg-bg-panel-elevated border border-bg-panel-border text-signal-gold font-mono text-xs font-bold flex items-center justify-center mb-4">
+              01
             </div>
-            <h3 className="font-semibold text-slate-900 text-sm mb-1.5 flex items-center gap-1.5">
-              <Mic className="w-4 h-4 text-blue-600" /> Vocal Capture
+            <h3 className="font-body font-semibold text-ink text-sm mb-2 flex items-center gap-2">
+              <Mic className="w-4 h-4 text-signal-gold" />
+              <span>Vocal Capture</span>
             </h3>
-            <p className="text-xs text-slate-600 leading-normal flex-1">
-              Sustained vowel phonation (<code className="font-mono text-[11px] bg-slate-100 px-1 py-0.5 rounded">/a/</code>)
-              captured via browser microphone or audio file upload (16kHz mono).
+            <p className="text-xs text-ink-muted font-body leading-relaxed flex-1">
+              Sustained vowel phonation (<code className="font-mono text-[11px] text-signal-gold bg-bg-void px-1 py-0.5 rounded border border-bg-panel-border">/a/</code>) captured via browser microphone or standard audio upload (16kHz mono).
             </p>
           </div>
 
           {/* Step 2 */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-subtle flex flex-col">
-            <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-sm mb-3">
-              2
+          <div className="bg-bg-panel p-5 rounded border border-bg-panel-border shadow-panel flex flex-col">
+            <div className="w-7 h-7 rounded bg-bg-panel-elevated border border-bg-panel-border text-signal-blue font-mono text-xs font-bold flex items-center justify-center mb-4">
+              02
             </div>
-            <h3 className="font-semibold text-slate-900 text-sm mb-1.5 flex items-center gap-1.5">
-              <Cpu className="w-4 h-4 text-indigo-600" /> WavLM Encoding
+            <h3 className="font-body font-semibold text-ink text-sm mb-2 flex items-center gap-2">
+              <Cpu className="w-4 h-4 text-signal-blue" />
+              <span>WavLM Transformer</span>
             </h3>
-            <p className="text-xs text-slate-600 leading-normal flex-1">
-              Neural feature extraction via 12-layer WavLM transformer generating 768-dim temporal acoustic frames.
+            <p className="text-xs text-ink-muted font-body leading-relaxed flex-1">
+              Self-supervised acoustic embeddings encode deep micro-jitter, shimmer, and vocal tract dynamics into 768-dim temporal frames.
             </p>
           </div>
 
           {/* Step 3 */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-subtle flex flex-col">
-            <div className="w-8 h-8 rounded-lg bg-purple-100 text-purple-700 font-bold flex items-center justify-center text-sm mb-3">
-              3
+          <div className="bg-bg-panel p-5 rounded border border-bg-panel-border shadow-panel flex flex-col">
+            <div className="w-7 h-7 rounded bg-bg-panel-elevated border border-bg-panel-border text-signal-gold font-mono text-xs font-bold flex items-center justify-center mb-4">
+              03
             </div>
-            <h3 className="font-semibold text-slate-900 text-sm mb-1.5 flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-purple-600" /> Explainability
+            <h3 className="font-body font-semibold text-ink text-sm mb-2 flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-signal-gold" />
+              <span>Attention Rollout</span>
             </h3>
-            <p className="text-xs text-slate-600 leading-normal flex-1">
-              Multi-head attention rollout computes time-aligned acoustic importance across phonation segments.
+            <p className="text-xs text-ink-muted font-body leading-relaxed flex-1">
+              Multi-head attention rollout visualizes exact acoustic time slices that drove the network&rsquo;s calibrated risk score.
             </p>
           </div>
 
           {/* Step 4 */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-subtle flex flex-col">
-            <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 font-bold flex items-center justify-center text-sm mb-3">
-              4
+          <div className="bg-bg-panel p-5 rounded border border-bg-panel-border shadow-panel flex flex-col">
+            <div className="w-7 h-7 rounded bg-bg-panel-elevated border border-bg-panel-border text-risk-low font-mono text-xs font-bold flex items-center justify-center mb-4">
+              04
             </div>
-            <h3 className="font-semibold text-slate-900 text-sm mb-1.5 flex items-center gap-1.5">
-              <FileText className="w-4 h-4 text-emerald-600" /> Grounded Report
+            <h3 className="font-body font-semibold text-ink text-sm mb-2 flex items-center gap-2">
+              <FileText className="w-4 h-4 text-risk-low" />
+              <span>Grounded Synthesis</span>
             </h3>
-            <p className="text-xs text-slate-600 leading-normal flex-1">
-              RAG evidence retrieval from curated literature + guardrailed LLM synthesis for clinical review.
+            <p className="text-xs text-ink-muted font-body leading-relaxed flex-1">
+              Retrieval-augmented generation (RAG) correlates acoustic patterns with curated peer-reviewed neurology literature.
             </p>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Protocol Guidelines & Clinical Design Standards */}
-      <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Phonation Protocol */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-card">
-          <h3 className="text-base font-bold text-slate-900 mb-3 flex items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-            Recommended Phonation Protocol
+      {/* Phonation Protocol & Longitudinal Audit */}
+      <section className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Protocol Card */}
+        <div className="bg-bg-panel p-6 rounded border border-bg-panel-border shadow-panel">
+          <h3 className="text-base font-display font-medium text-ink mb-4 flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-signal-gold" />
+            <span>Recommended Phonation Protocol</span>
           </h3>
-          <ul className="space-y-2.5 text-xs text-slate-600">
-            <li className="flex items-start gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-1 shrink-0" />
-              <span><strong>Environment:</strong> Sit in a quiet room with minimal ambient background noise or echo.</span>
+          <ul className="space-y-3 text-xs text-ink-muted font-body">
+            <li className="flex items-start gap-2.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-signal-gold mt-1.5 shrink-0" />
+              <span><strong className="text-ink font-medium">Environment:</strong> Quiet acoustic room with minimal echo or background voices.</span>
             </li>
-            <li className="flex items-start gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-1 shrink-0" />
-              <span><strong>Distance:</strong> Position microphone approximately 10&ndash;15 cm (4&ndash;6 inches) from mouth.</span>
+            <li className="flex items-start gap-2.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-signal-gold mt-1.5 shrink-0" />
+              <span><strong className="text-ink font-medium">Position:</strong> Maintain microphone roughly 10&ndash;15 cm (4&ndash;6 inches) from mouth.</span>
             </li>
-            <li className="flex items-start gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-1 shrink-0" />
-              <span><strong>Phonation:</strong> Inhale deeply and sustain a steady vowel sound <code className="font-mono bg-slate-100 px-1 py-0.5 rounded text-slate-800">/a/</code> (&ldquo;ahhh&rdquo;) for 3 to 5 seconds.</span>
+            <li className="flex items-start gap-2.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-signal-gold mt-1.5 shrink-0" />
+              <span><strong className="text-ink font-medium">Phonation:</strong> Inhale deeply and sustain a steady vowel sound <code className="font-mono bg-bg-void px-1 py-0.5 rounded text-signal-gold border border-bg-panel-border">/a/</code> (&ldquo;ahhh&rdquo;) for 3 to 5 seconds.</span>
             </li>
-            <li className="flex items-start gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-1 shrink-0" />
-              <span><strong>Pitch &amp; Volume:</strong> Maintain a comfortable, natural pitch and steady conversational volume.</span>
+            <li className="flex items-start gap-2.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-signal-gold mt-1.5 shrink-0" />
+              <span><strong className="text-ink font-medium">Consistency:</strong> Speak at a steady, comfortable conversational pitch and loudness.</span>
             </li>
           </ul>
         </div>
 
-        {/* Clinical History & Record Access */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-card flex flex-col justify-between">
+        {/* Audit Trail Card */}
+        <div className="bg-bg-panel p-6 rounded border border-bg-panel-border shadow-panel flex flex-col justify-between">
           <div>
-            <h3 className="text-base font-bold text-slate-900 mb-3 flex items-center gap-2">
-              <History className="w-5 h-5 text-blue-600" />
-              Audit Trail &amp; Longitudinal History
+            <h3 className="text-base font-display font-medium text-ink mb-4 flex items-center gap-2">
+              <History className="w-4 h-4 text-signal-blue" />
+              <span>Audit Trail &amp; Longitudinal History</span>
             </h3>
-            <p className="text-xs text-slate-600 leading-relaxed mb-4">
-              All screening runs are stored in the local clinical repository with time-stamped attention rollout maps and optional patient reference IDs.
+            <p className="text-xs text-ink-muted font-body leading-relaxed mb-6">
+              Every screening session is indexed in the local SQLite database alongside its temporal attention rollout and synthesized evidence report for physician review. Raw audio waveforms are purged immediately post-inference.
             </p>
           </div>
           <Link
             to="/history"
-            className="inline-flex items-center justify-between px-4 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-800 transition-colors"
+            className="inline-flex items-center justify-between px-4 py-3 rounded bg-bg-panel-elevated hover:bg-bg-panel-border border border-bg-panel-border text-xs font-body font-medium text-ink transition-colors"
           >
-            <span>Review screening history records</span>
-            <span>&rarr;</span>
+            <span>Review screening audit history</span>
+            <ArrowRight className="w-3.5 h-3.5 text-signal-gold" />
           </Link>
         </div>
-      </div>
+      </section>
     </PageContainer>
   );
 };

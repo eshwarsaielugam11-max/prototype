@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -48,6 +47,7 @@ describe('Result Page', () => {
         peak_timestamp_sec: 2.0,
       }),
       has_report: false,
+      report_json: null,
       created_at: '2026-03-20T10:00:00Z',
     };
 
@@ -86,6 +86,7 @@ describe('Result Page', () => {
       model_version: 'wav2vec2-parkinsons-v1',
       attention_heatmap_json: null,
       has_report: true,
+      report_json: null,
       created_at: '2026-03-20T11:00:00Z',
     };
 

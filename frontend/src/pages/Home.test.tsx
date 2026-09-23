@@ -11,10 +11,11 @@ describe('Home Page', () => {
       </BrowserRouter>
     );
 
-    expect(screen.getByText(/Non-Invasive Vocal Biomarker Screening for Parkinson/i)).toBeInTheDocument();
+    expect(screen.getByText(/Voice becoming visible signal\./i)).toBeInTheDocument();
+    expect(screen.getByText(/Non-invasive acoustic biomarker screening for Parkinson/i)).toBeInTheDocument();
     expect(screen.getByText(/This is a research screening tool\. It does not diagnose Parkinson/i)).toBeInTheDocument();
-    expect(screen.getByText(/How the Screening Pipeline Works/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Start Live Voice Recording/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Upload Audio Recording/i })).toBeInTheDocument();
+    expect(screen.getByText(/How the Screening Pipeline Operates/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Start Live Phonation/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Upload Audio File/i })).toBeInTheDocument();
   });
 });
