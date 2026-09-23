@@ -43,7 +43,7 @@ describe('AudioRecorder Component', () => {
       </BrowserRouter>
     );
 
-    expect(screen.getByText(/Start Phonation Recording/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Start Phonation Recording/i })).toBeInTheDocument();
     expect(screen.getByText(/STANDBY/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Patient \/ Session Reference ID/i)).toBeInTheDocument();
   });

@@ -69,21 +69,21 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onPredictionSucces
       animationFrameRef.current = requestAnimationFrame(render);
       analyser.getByteTimeDomainData(dataArray);
 
-      // Background
-      ctx.fillStyle = '#0f172a'; // Navy Slate
+      // Deep dark canvas background
+      ctx.fillStyle = '#06070C';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Grid line (center)
+      // Grid center hairline
       ctx.lineWidth = 1;
-      ctx.strokeStyle = '#1e293b';
+      ctx.strokeStyle = '#222638';
       ctx.beginPath();
       ctx.moveTo(0, canvas.height / 2);
       ctx.lineTo(canvas.width, canvas.height / 2);
       ctx.stroke();
 
-      // Waveform line
+      // Waveform line in luminous signal-gold
       ctx.lineWidth = 2.5;
-      ctx.strokeStyle = '#38bdf8'; // Sky Blue
+      ctx.strokeStyle = '#D9A55C';
       ctx.beginPath();
 
       const sliceWidth = (canvas.width * 1.0) / bufferLength;
@@ -115,7 +115,6 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onPredictionSucces
     setMicDenied(false);
     audioChunksRef.current = [];
 
-    // Revoke existing URL if any
     if (audioUrl) {
       URL.revokeObjectURL(audioUrl);
       setAudioUrl(null);
@@ -136,7 +135,6 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onPredictionSucces
 
       streamRef.current = stream;
 
-      // Audio Analyser Setup
       const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       const audioCtx = new AudioCtx();
       audioContextRef.current = audioCtx;
@@ -147,7 +145,6 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onPredictionSucces
       source.connect(analyser);
       analyserRef.current = analyser;
 
-      // MediaRecorder Setup with optimal mimeType
       const mimeTypes = [
         'audio/webm;codecs=opus',
         'audio/webm',
@@ -179,7 +176,6 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onPredictionSucces
         const url = URL.createObjectURL(blob);
         setAudioUrl(url);
 
-        // Stop stream tracks
         stream.getTracks().forEach((track) => track.stop());
         if (animationFrameRef.current) {
           cancelAnimationFrame(animationFrameRef.current);
@@ -187,16 +183,14 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onPredictionSucces
       };
 
       mediaRecorderRef.current = recorder;
-      recorder.start(100); // 100ms chunk intervals
+      recorder.start(100);
       setIsRecording(true);
 
-      // Start duration counter
       const startTime = Date.now();
       timerIntervalRef.current = window.setInterval(() => {
         setDuration(Math.floor((Date.now() - startTime) / 1000));
       }, 200);
 
-      // Start live canvas rendering
       drawWaveform();
     } catch (err: unknown) {
       console.error('Microphone access failed:', err);
@@ -282,11 +276,11 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onPredictionSucces
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-card p-6 sm:p-8">
+    <div className="bg-bg-panel rounded-lg border border-bg-panel-border shadow-panel p-6 sm:p-8">
       {/* Optional Patient / Reference Identifier */}
       <div className="mb-6 max-w-md">
-        <label htmlFor="test-id" className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-          Patient / Session Reference ID <span className="text-slate-400 font-normal">(Optional)</span>
+        <label htmlFor="test-id" className="block text-xs font-semibold text-ink-muted uppercase tracking-wider mb-2 font-body">
+          Patient / Session Reference ID <span className="text-ink-faint font-normal">(Optional)</span>
         </label>
         <input
           id="test-id"
@@ -295,12 +289,12 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onPredictionSucces
           onChange={(e) => setTestId(e.target.value)}
           placeholder="e.g. PT-2026-0814 or Clinician-Ref"
           disabled={isRecording || isAnalyzing}
-          className="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all disabled:opacity-60"
+          className="w-full px-3.5 py-2 text-sm bg-bg-void border border-bg-panel-border rounded text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-signal-gold focus:border-transparent transition-all disabled:opacity-50 font-body"
         />
       </div>
 
       {/* Live Waveform & Status Screen */}
-      <div className="relative rounded-xl overflow-hidden bg-slate-900 border border-slate-800 shadow-inner mb-6">
+      <div className="relative rounded overflow-hidden bg-bg-void border border-bg-panel-border shadow-inner mb-6">
         {/* Canvas Display */}
         <canvas
           ref={canvasRef}
@@ -309,69 +303,70 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onPredictionSucces
           className="w-full h-40 object-cover"
         />
 
-        {/* Overlay Badges */}
+        {/* Overlay Status Badges */}
         <div className="absolute top-3 left-3 flex items-center gap-2">
           {isRecording ? (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-500/20 text-red-400 border border-red-500/30 backdrop-blur-sm animate-pulse">
-              <span className="w-2 h-2 rounded-full bg-red-500" />
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-risk-elevated/20 text-risk-elevated border border-risk-elevated/40 backdrop-blur-md animate-pulse">
+              <span className="w-2 h-2 rounded-full bg-risk-elevated" />
               LIVE RECORDING
             </span>
           ) : audioBlob ? (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 backdrop-blur-sm">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-risk-low/20 text-risk-low border border-risk-low/40 backdrop-blur-md">
+              <CheckCircle2 className="w-3.5 h-3.5 text-risk-low" />
               RECORDING READY
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-800/80 text-slate-300 border border-slate-700 backdrop-blur-sm">
-              <Volume2 className="w-3.5 h-3.5 text-slate-400" />
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-bg-panel/80 text-ink-muted border border-bg-panel-border backdrop-blur-md">
+              <Volume2 className="w-3.5 h-3.5 text-signal-gold" />
               STANDBY
             </span>
           )}
         </div>
 
         {/* Duration Timer */}
-        <div className="absolute top-3 right-3 font-mono text-base font-bold text-white bg-slate-800/80 border border-slate-700 px-3 py-1 rounded-md backdrop-blur-sm">
+        <div className="absolute top-3 right-3 font-mono text-sm font-bold text-ink bg-bg-panel/90 border border-bg-panel-border px-3 py-1 rounded backdrop-blur-md">
           {formatTimer(duration)}
         </div>
 
         {/* Guided Phonation Cue in Canvas Center */}
         {!isRecording && !audioBlob && (
           <div className="absolute inset-0 flex flex-col items-center justify-center p-4 pointer-events-none text-center">
-            <Mic className="w-8 h-8 text-slate-600 mb-2" />
-            <p className="text-sm font-medium text-slate-300">
-              Click &ldquo;Start Recording&rdquo; below and sustain the vowel /a/ (&ldquo;ahhh&rdquo;)
+            <Mic className="w-7 h-7 text-signal-gold/60 mb-2" />
+            <p className="text-sm font-medium text-ink font-body">
+              Click &ldquo;Start Phonation Recording&rdquo; below and sustain the vowel /a/ (&ldquo;ahhh&rdquo;)
             </p>
-            <p className="text-xs text-slate-500 mt-1">Recommended duration: 3 to 5 seconds</p>
+            <p className="text-xs text-ink-muted mt-1 font-body">Recommended duration: 3 to 5 seconds</p>
           </div>
         )}
       </div>
 
       {/* Error Alert Display */}
       {error && (
-        <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 flex items-start gap-3 text-red-900 text-sm">
-          <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+        <div className="mb-6 p-4 rounded bg-risk-elevated/10 border border-risk-elevated/40 flex items-start gap-3 text-ink text-sm">
+          <AlertCircle className="w-5 h-5 text-risk-elevated shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="font-semibold">{micDenied ? 'Microphone Permission Blocked' : 'Recording / Validation Issue'}</p>
-            <p className="text-xs text-red-800 mt-0.5">{error}</p>
+            <p className="font-semibold text-risk-elevated">{micDenied ? 'Microphone Permission Blocked' : 'Recording / Validation Issue'}</p>
+            <p className="text-xs text-ink-muted mt-0.5 leading-relaxed">{error}</p>
           </div>
         </div>
       )}
 
       {/* Playback Preview Player (Once Recorded) */}
       {audioUrl && !isRecording && (
-        <div className="mb-6 p-4 rounded-xl bg-slate-50 border border-slate-200">
+        <div className="mb-6 p-4 rounded bg-bg-void border border-bg-panel-border">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
-            <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
-              <Volume2 className="w-4 h-4 text-blue-600" />
+            <div className="flex items-center gap-2 text-xs font-semibold text-ink">
+              <Volume2 className="w-4 h-4 text-signal-gold" />
               <span>Playback Verification ({duration}s captured)</span>
             </div>
             <button
+              type="button"
               onClick={resetRecording}
               disabled={isAnalyzing}
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-muted hover:text-ink transition-colors disabled:opacity-50"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              Re-record Audio
+              <span>Re-record Audio</span>
             </button>
           </div>
           <audio controls src={audioUrl} className="w-full h-10 mt-1 rounded focus:outline-none" />
@@ -384,10 +379,10 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onPredictionSucces
           <button
             type="button"
             onClick={startRecording}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-md transition-transform active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded bg-signal-gold hover:bg-signal-gold-hover text-bg-void font-body text-sm font-semibold shadow-glow-gold transition-all active:scale-95 focus-visible:ring-2 focus-visible:ring-signal-gold focus-visible:outline-none"
           >
-            <Mic className="w-5 h-5" />
-            Start Phonation Recording
+            <Mic className="w-4 h-4" />
+            <span>Start Phonation Recording</span>
           </button>
         )}
 
@@ -395,10 +390,10 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onPredictionSucces
           <button
             type="button"
             onClick={stopRecording}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-6 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm shadow-md transition-transform active:scale-95 animate-pulse focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded bg-risk-elevated hover:bg-red-600 text-white font-body text-sm font-semibold shadow-md transition-all active:scale-95 animate-pulse focus-visible:ring-2 focus-visible:ring-risk-elevated focus-visible:outline-none"
           >
             <Square className="w-4 h-4 fill-current" />
-            Stop Recording ({duration}s)
+            <span>Stop Recording ({duration}s)</span>
           </button>
         )}
 
@@ -408,21 +403,21 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onPredictionSucces
               type="button"
               onClick={resetRecording}
               disabled={isAnalyzing}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium text-sm transition-colors disabled:opacity-50"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded border border-bg-panel-border text-ink-muted hover:text-ink hover:bg-bg-panel-elevated font-medium text-xs font-body transition-colors disabled:opacity-50"
             >
-              <RotateCcw className="w-4 h-4" />
-              Discard &amp; Re-record
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Discard &amp; Re-record</span>
             </button>
 
             <button
               type="button"
               onClick={handleAnalyze}
               disabled={isAnalyzing || duration < 1}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-7 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-md transition-all active:scale-95 disabled:opacity-60 disabled:pointer-events-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-7 py-3 rounded bg-signal-gold hover:bg-signal-gold-hover text-bg-void font-body text-sm font-semibold shadow-glow-gold transition-all active:scale-95 disabled:opacity-60 disabled:pointer-events-none focus-visible:ring-2 focus-visible:ring-signal-gold focus-visible:outline-none"
             >
               {isAnalyzing ? (
                 <>
-                  <Activity className="w-4 h-4 animate-spin text-white" />
+                  <Activity className="w-4 h-4 animate-spin text-bg-void" />
                   <span>Analyzing Acoustic Biomarkers...</span>
                 </>
               ) : (
@@ -437,12 +432,11 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onPredictionSucces
       </div>
 
       {/* Near-Action Medical Safety Notice */}
-      <div className="mt-6 pt-4 border-t border-slate-100 flex items-start gap-2 text-[11px] text-slate-500">
-        <ShieldAlert className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-        <span>
-          <strong>Clinical Notice:</strong> Audio features are computed in real time by WavLM acoustic encoders.
-          Acoustic screening provides decision support probability only and is not a clinical diagnosis.
-        </span>
+      <div className="mt-6 pt-4 border-t border-bg-panel-border/60 flex items-start gap-2.5 text-xs text-ink-muted">
+        <ShieldAlert className="w-4 h-4 text-signal-gold shrink-0 mt-0.5" />
+        <p className="leading-relaxed">
+          <strong className="text-ink font-medium">Screening Advisory:</strong> Audio is analyzed in volatile memory and purged immediately post-inference. Screening results are strictly intended for research and decision support, not diagnostic certainty.
+        </p>
       </div>
     </div>
   );

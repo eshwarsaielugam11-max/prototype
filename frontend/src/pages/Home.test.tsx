@@ -4,18 +4,27 @@ import { BrowserRouter } from 'react-router-dom';
 import { Home } from './Home';
 
 describe('Home Page', () => {
-  it('renders project introduction, pipeline steps, and disclaimer', () => {
+  it('renders hero section, explainability section, evidence section, and disclaimer', () => {
     render(
       <BrowserRouter>
         <Home />
       </BrowserRouter>
     );
 
-    expect(screen.getByText(/Voice becoming visible signal\./i)).toBeInTheDocument();
-    expect(screen.getByText(/Non-invasive acoustic biomarker screening for Parkinson/i)).toBeInTheDocument();
-    expect(screen.getByText(/This is a research screening tool\. It does not diagnose Parkinson/i)).toBeInTheDocument();
-    expect(screen.getByText(/How the Screening Pipeline Operates/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Start Live Phonation/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Upload Audio File/i })).toBeInTheDocument();
+    // Hero headline and subhead
+    expect(screen.getByText(/Hear what your voice/i)).toBeInTheDocument();
+    expect(screen.getByText(/reveals/i)).toBeInTheDocument();
+    expect(screen.getByText(/A research screening tool translating subtle acoustic perturbations/i)).toBeInTheDocument();
+
+    // Hero CTAs
+    expect(screen.getByRole('link', { name: /Begin Screening/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /or record now with microphone/i })).toBeInTheDocument();
+
+    // Prominent disclaimer directly below CTA
+    expect(screen.getByText(/Research Tool:/i)).toBeInTheDocument();
+
+    // Narrative sections
+    expect(screen.getByText(/No black boxes\. Every finding is time-mapped to your voice\./i)).toBeInTheDocument();
+    expect(screen.getByText(/Peer-reviewed literature, cited directly in every report\./i)).toBeInTheDocument();
   });
 });
