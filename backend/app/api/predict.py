@@ -5,9 +5,11 @@ neural network inference and attention explainability calculation, and persists
 the screening outcome to the local SQLite database.
 """
 
-from typing import Optional
+from collections import defaultdict
 import json
 import logging
+import time
+from typing import Dict, List, Optional
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from sqlalchemy.orm import Session
 
@@ -22,6 +24,43 @@ logger = logging.getLogger("parkinsons_platform.api.predict")
 router = APIRouter(prefix="/predict", tags=["Screening"])
 
 
+class InMemoryRateLimiter:
+    """Lightweight in-memory sliding window rate limiter per client IP.
+
+    Designed for local/single-user clinical research deployment per 'do not overengineer' principles.
+    Prevents client loops/accidental rapid submissions while adding zero external infrastructure dependencies.
+    """
+
+    def __init__(self, max_requests: int = 30, window_seconds: int = 60):
+        self.max_requests = max_requests
+        self.window_seconds = window_seconds
+        self.requests: Dict[str, List[float]] = defaultdict(list)
+
+    def check_rate_limit(self, client_ip: str) -> None:
+        now = time.time()
+        window_start = now - self.window_seconds
+        # Retain timestamps within active sliding window
+        self.requests[client_ip] = [t for t in self.requests[client_ip] if t > window_start]
+
+        if len(self.requests[client_ip]) >= self.max_requests:
+            logger.warning(
+                "Rate limit exceeded for client IP %s (%d requests in %ds)",
+                client_ip,
+                self.max_requests,
+                self.window_seconds,
+            )
+            raise HTTPException(
+                status_code=429,
+                detail=f"Rate limit exceeded (maximum {self.max_requests} requests per minute). Please wait before submitting additional screening audio.",
+            )
+
+        self.requests[client_ip].append(now)
+
+
+# Global rate limiter instance (30 requests per minute per client host)
+predict_rate_limiter = InMemoryRateLimiter(max_requests=30, window_seconds=60)
+
+
 @router.post("", response_model=PredictResponse, status_code=200)
 async def predict_audio(
     request: Request,
@@ -32,12 +71,18 @@ async def predict_audio(
 ) -> PredictResponse:
     """Run non-diagnostic acoustic screening on an audio sample.
 
-    1. Validates audio format, size, duration, and energy constraints.
-    2. Runs feature extraction via WavLM and classification via the trained acoustic model.
-    3. Computes time-aligned attention rollout heatmap.
-    4. Persists the screening record into the database.
-    5. Returns prediction classification, continuous probability, and explainability heatmap.
+    1. Applies rate-limiting check per client IP.
+    2. Validates audio format, size, duration, and energy constraints server-side.
+    3. Runs feature extraction via WavLM and classification via the trained acoustic model.
+    4. Computes time-aligned attention rollout heatmap.
+    5. Persists the screening record into SQLite without persisting raw audio.
+    6. Returns prediction classification, continuous probability, and explainability heatmap.
     """
+    # 0. Rate limiting check
+    client_ip = request.client.host if request.client else "127.0.0.1"
+    predict_rate_limiter.check_rate_limit(client_ip)
+
+    # 1. Source modality validation
     normalized_source = source.strip().lower() if source else "recording"
     if normalized_source not in ("recording", "upload"):
         raise HTTPException(
@@ -71,7 +116,7 @@ async def predict_audio(
         )
 
     # Execute acoustic inference & explainability
-    # validate_audio_file inside inference_service.predict will raise HTTPException(400) if validation fails
+    # validate_audio_file inside inference_service.predict will raise HTTPException(400) on validation failures
     try:
         prediction_result = inference_service.predict(
             audio_bytes=audio_bytes,
@@ -87,7 +132,7 @@ async def predict_audio(
             detail="Internal error occurred while executing acoustic screening inference.",
         )
 
-    # Persist screening record to SQLite
+    # Persist screening record to SQLite (zero raw audio persistence)
     record_in = TestRecordCreate(
         test_id=clean_test_id,
         source=normalized_source,  # type: ignore[arg-type]
