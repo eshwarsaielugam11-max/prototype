@@ -6,7 +6,7 @@ for all required database, vector store, ML artifact, and server network setting
 
 from functools import lru_cache
 from pathlib import Path
-from typing import List, Union
+from typing import List, Optional, Union
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -22,7 +22,25 @@ class Settings(BaseSettings):
         case_sensitive=False,
     )
 
-    # Ollama Local LLM Settings
+    # Hosted LLM Settings (Primary: Groq, Fallback: Gemini / OpenRouter)
+    llm_provider: str = Field(
+        default="groq",
+        description="Active LLM provider: 'groq' | 'gemini' | 'openrouter' | 'ollama'",
+    )
+    llm_api_key: Optional[str] = Field(
+        default=None,
+        description="API key for hosted LLM provider (Groq/Gemini/OpenRouter)",
+    )
+    llm_model: str = Field(
+        default="llama-3.3-70b-versatile",
+        description="Model name on target provider (e.g., 'llama-3.3-70b-versatile', 'gemini-2.5-flash')",
+    )
+    llm_base_url: str = Field(
+        default="https://api.groq.com/openai/v1",
+        description="Base URL for OpenAI-compatible LLM endpoint (Groq / OpenRouter)",
+    )
+
+    # Legacy/Local Ollama Settings (Optional Local Fallback)
     ollama_host: str = Field(
         default="http://localhost:11434",
         description="Base URL for local Ollama service",

@@ -1,156 +1,309 @@
-"""Unit and integration tests for LLMService and local Ollama wrapper."""
+"""Unit and integration tests for provider-abstracted LLMService.
 
-from unittest.mock import MagicMock
+TECHNICAL NOTE:
+In accordance with task constraints, ALL tests mock underlying HTTP clients.
+NO real network requests are executed in the automated test suite to prevent
+burning free-tier API quotas.
+"""
+
+from unittest.mock import MagicMock, patch
 import pytest
 
-from backend.app.config import get_settings
-from backend.app.services.llm import LLMService, get_llm_service
+from backend.app.config import Settings
+from backend.app.services.llm import (
+    GeminiLLMProvider,
+    LLMAuthenticationError,
+    LLMConnectionError,
+    LLMError,
+    LLMRateLimitError,
+    LLMService,
+    OllamaLLMProvider,
+    OpenAICompatibleProvider,
+    get_llm_service,
+)
 
 
-def is_live_model_ready() -> bool:
-    """Helper determining if a live local Ollama instance has the configured model ready."""
-    try:
-        service = LLMService()
-        ready, _ = service.check_availability()
-        return ready
-    except Exception:
-        return False
+# ------------------------------------------------------------------------------
+# Provider Selection and Initialization Tests
+# ------------------------------------------------------------------------------
 
-
-def test_llm_service_init():
-    """Verify default initialization loads host and model from application settings."""
-    settings = get_settings()
+def test_provider_selection_groq():
+    """Verify Groq provider maps to OpenAICompatibleProvider with Groq endpoint."""
+    settings = Settings(
+        llm_provider="groq",
+        llm_api_key="test-groq-key",
+        llm_model="llama-3.3-70b-versatile",
+        llm_base_url="https://api.groq.com/openai/v1",
+    )
     service = LLMService(settings=settings)
+    assert isinstance(service.provider, OpenAICompatibleProvider)
+    assert service.provider.base_url == "https://api.groq.com/openai/v1"
+    assert service.provider.model == "llama-3.3-70b-versatile"
 
-    assert service.host == settings.ollama_host
-    assert service.model_name == settings.ollama_model
-    assert service.client is not None
+
+def test_provider_selection_openrouter():
+    """Verify OpenRouter provider maps to OpenAICompatibleProvider with OpenRouter endpoint."""
+    settings = Settings(
+        llm_provider="openrouter",
+        llm_api_key="test-or-key",
+        llm_model="meta-llama/llama-3.3-70b-instruct",
+        llm_base_url="https://openrouter.ai/api/v1",
+    )
+    service = LLMService(settings=settings)
+    assert isinstance(service.provider, OpenAICompatibleProvider)
+    assert service.provider.base_url == "https://openrouter.ai/api/v1"
 
 
-def test_check_availability_model_present():
-    """Verify check_availability returns True when target model is reported by Ollama."""
+def test_provider_selection_gemini():
+    """Verify Gemini provider maps to GeminiLLMProvider."""
+    settings = Settings(
+        llm_provider="gemini",
+        llm_api_key="test-gemini-key",
+        llm_model="gemini-2.5-flash",
+    )
+    service = LLMService(settings=settings)
+    assert isinstance(service.provider, GeminiLLMProvider)
+    assert service.provider.model_name == "gemini-2.5-flash"
+
+
+def test_provider_selection_invalid_raises_value_error():
+    """Verify unsupported provider name raises ValueError."""
+    settings = Settings(llm_provider="unsupported_provider", llm_api_key="dummy")
+    with pytest.raises(ValueError) as exc_info:
+        LLMService(settings=settings)
+    assert "Unsupported LLM provider" in str(exc_info.value)
+
+
+# ------------------------------------------------------------------------------
+# Non-Fatal Availability Check Tests (Zero Quota Usage on Boot)
+# ------------------------------------------------------------------------------
+
+def test_check_availability_with_valid_key():
+    """Verify check_availability reports ready when non-empty key is present."""
+    settings = Settings(llm_provider="groq", llm_api_key="gsk_valid_free_tier_key")
+    service = LLMService(settings=settings)
+    available, msg = service.check_availability()
+
+    assert available is True
+    assert "groq" in msg.lower()
+    assert "configured" in msg.lower()
+
+
+def test_check_availability_with_missing_key():
+    """Verify check_availability reports False with guidance when key is None or empty."""
+    settings = Settings(llm_provider="groq", llm_api_key=None)
+    service = LLMService(settings=settings)
+    available, msg = service.check_availability()
+
+    assert available is False
+    assert "LLM_API_KEY is not set" in msg
+    assert "docs/LLM_SETUP.md" in msg
+
+
+def test_check_availability_with_placeholder_key():
+    """Verify check_availability reports False when placeholder text is detected."""
+    settings = Settings(llm_provider="groq", llm_api_key="your-groq-api-key-here")
+    service = LLMService(settings=settings)
+    available, msg = service.check_availability()
+
+    assert available is False
+    assert "LLM_API_KEY is not set" in msg
+
+
+# ------------------------------------------------------------------------------
+# Mocked Generation & Error Mapping Tests (OpenAI / Groq)
+# ------------------------------------------------------------------------------
+
+def test_openai_compatible_generate_success():
+    """Verify successful chat completion payload construction and response parsing."""
     mock_client = MagicMock()
-    # Simulate ollama.Client.list() returning matching model
-    mock_model = MagicMock()
-    mock_model.model = "qwen2.5:3b-instruct"
-    mock_client.list.return_value = MagicMock(models=[mock_model])
+    mock_choice = MagicMock()
+    mock_choice.message.content = "Clinical Decision Support Summary: Elevated vocal tremor observed."
+    mock_response = MagicMock(choices=[mock_choice])
+    mock_client.chat.completions.create.return_value = mock_response
 
-    service = LLMService(client=mock_client)
-    is_available, message = service.check_availability()
+    provider = OpenAICompatibleProvider(
+        api_key="mock_secret_key_12345",
+        base_url="https://api.groq.com/openai/v1",
+        model="llama-3.3-70b-versatile",
+        client=mock_client,
+    )
+    service = LLMService(
+        settings=Settings(llm_provider="groq", llm_api_key="mock_secret_key_12345"),
+        provider=provider,
+    )
 
-    assert is_available is True
-    assert "ready" in message
-    assert service.model_name in message
-
-
-def test_check_availability_model_missing():
-    """Verify check_availability returns False with pull instructions when model is not installed."""
-    mock_client = MagicMock()
-    mock_model = MagicMock()
-    mock_model.model = "llama3.2:1b"
-    mock_client.list.return_value = MagicMock(models=[mock_model])
-
-    service = LLMService(client=mock_client)
-    is_available, message = service.check_availability()
-
-    assert is_available is False
-    assert "not pulled" in message
-    assert f"ollama pull {service.model_name}" in message
-
-
-def test_check_availability_connection_error():
-    """Verify check_availability handles connection failure gracefully with serve instructions."""
-    mock_client = MagicMock()
-    mock_client.list.side_effect = ConnectionRefusedError("Failed to connect to Ollama")
-
-    service = LLMService(client=mock_client)
-    is_available, message = service.check_availability()
-
-    assert is_available is False
-    assert "Cannot connect to local Ollama service" in message
-    assert "ollama serve" in message
-
-
-def test_generate_mock_success():
-    """Verify generate correctly constructs chat payloads and extracts message content."""
-    mock_client = MagicMock()
-    mock_response = MagicMock()
-    mock_response.message.content = "  The patient exhibits moderate vocal hypophonia.  "
-    mock_client.chat.return_value = mock_response
-
-    service = LLMService(client=mock_client)
     result = service.generate(
-        system_prompt="You are a clinical decision support system.",
-        user_prompt="Summarize acoustic findings.",
-        temperature=0.25,
+        system_prompt="You are a clinical decision support assistant.",
+        user_prompt="Analyze acoustic test scores.",
+        temperature=0.2,
         max_tokens=512,
     )
 
-    assert result == "The patient exhibits moderate vocal hypophonia."
-    mock_client.chat.assert_called_once()
-    call_kwargs = mock_client.chat.call_args[1]
-    assert call_kwargs["model"] == service.model_name
-    assert call_kwargs["messages"] == [
-        {"role": "system", "content": "You are a clinical decision support system."},
-        {"role": "user", "content": "Summarize acoustic findings."},
-    ]
-    assert call_kwargs["options"]["temperature"] == 0.25
-    assert call_kwargs["options"]["num_predict"] == 512
+    assert result == "Clinical Decision Support Summary: Elevated vocal tremor observed."
+    mock_client.chat.completions.create.assert_called_once_with(
+        model="llama-3.3-70b-versatile",
+        messages=[
+            {"role": "system", "content": "You are a clinical decision support assistant."},
+            {"role": "user", "content": "Analyze acoustic test scores."},
+        ],
+        temperature=0.2,
+        max_tokens=512,
+    )
 
 
-def test_generate_mock_error_raises_runtime_error():
-    """Verify generation failure raises informative RuntimeError."""
+def test_openai_compatible_auth_error():
+    """Verify HTTP 401/403 AuthenticationError raises LLMAuthenticationError."""
+    import openai
+
     mock_client = MagicMock()
-    mock_client.chat.side_effect = TimeoutError("Ollama request timed out after 60s")
+    mock_client.chat.completions.create.side_effect = openai.AuthenticationError(
+        message="Invalid API Key provided",
+        response=MagicMock(status_code=401),
+        body={},
+    )
 
-    service = LLMService(client=mock_client)
-    with pytest.raises(RuntimeError) as exc_info:
-        service.generate(
-            system_prompt="System",
-            user_prompt="User",
-        )
-    assert "Failed to generate completion from Ollama" in str(exc_info.value)
-    assert "Verify that `ollama serve` is running" in str(exc_info.value)
+    provider = OpenAICompatibleProvider(
+        api_key="mock_bad_key",
+        base_url="https://api.groq.com/openai/v1",
+        model="llama-3.3-70b-versatile",
+        client=mock_client,
+    )
+    service = LLMService(
+        settings=Settings(llm_provider="groq", llm_api_key="mock_bad_key"),
+        provider=provider,
+    )
 
+    with pytest.raises(LLMAuthenticationError) as exc_info:
+        service.generate(system_prompt="System", user_prompt="User")
+
+    assert "Invalid or missing API key" in str(exc_info.value)
+    assert "mock_bad_key" not in str(exc_info.value)  # Ensure key is never leaked
+
+
+def test_openai_compatible_rate_limit_error_429():
+    """Verify HTTP 429 RateLimitError raises LLMRateLimitError."""
+    import openai
+
+    mock_client = MagicMock()
+    mock_client.chat.completions.create.side_effect = openai.RateLimitError(
+        message="Rate limit reached for organization",
+        response=MagicMock(status_code=429),
+        body={},
+    )
+
+    provider = OpenAICompatibleProvider(
+        api_key="mock_key",
+        base_url="https://api.groq.com/openai/v1",
+        model="llama-3.3-70b-versatile",
+        client=mock_client,
+    )
+    service = LLMService(
+        settings=Settings(llm_provider="groq", llm_api_key="mock_key"),
+        provider=provider,
+    )
+
+    with pytest.raises(LLMRateLimitError) as exc_info:
+        service.generate(system_prompt="System", user_prompt="User")
+
+    assert "Free-tier rate limit reached" in str(exc_info.value)
+    assert "HTTP 429" in str(exc_info.value)
+
+
+def test_openai_compatible_timeout_error():
+    """Verify APITimeoutError raises LLMConnectionError with timeout details."""
+    import openai
+
+    mock_client = MagicMock()
+    mock_client.chat.completions.create.side_effect = openai.APITimeoutError(
+        request=MagicMock()
+    )
+
+    provider = OpenAICompatibleProvider(
+        api_key="mock_key",
+        base_url="https://api.groq.com/openai/v1",
+        model="llama-3.3-70b-versatile",
+        client=mock_client,
+    )
+    service = LLMService(
+        settings=Settings(llm_provider="groq", llm_api_key="mock_key"),
+        provider=provider,
+    )
+
+    with pytest.raises(LLMConnectionError) as exc_info:
+        service.generate(system_prompt="System", user_prompt="User")
+
+    assert "unreachable or timed out" in str(exc_info.value)
+
+
+def test_generate_refuses_when_key_is_missing():
+    """Verify generate immediately raises LLMAuthenticationError if key is missing/placeholder."""
+    settings = Settings(llm_provider="groq", llm_api_key="")
+    mock_provider = MagicMock()
+    service = LLMService(settings=settings, provider=mock_provider)
+
+    with pytest.raises(LLMAuthenticationError) as exc_info:
+        service.generate(system_prompt="System", user_prompt="User")
+
+    assert "LLM_API_KEY is missing or contains placeholder" in str(exc_info.value)
+    mock_provider.generate.assert_not_called()
+
+
+# ------------------------------------------------------------------------------
+# Mocked Generation Tests (Gemini)
+# ------------------------------------------------------------------------------
+
+def test_gemini_provider_generate_success():
+    """Verify Gemini provider successfully formats and extracts completion."""
+    mock_gemini_client = MagicMock()
+    mock_gemini_client.generate_content.return_value = MagicMock(
+        text="Grounded report: Mild pitch variability detected."
+    )
+
+    provider = GeminiLLMProvider(
+        api_key="mock_gemini_key",
+        model="gemini-2.5-flash",
+        client=mock_gemini_client,
+    )
+    service = LLMService(
+        settings=Settings(llm_provider="gemini", llm_api_key="mock_gemini_key"),
+        provider=provider,
+    )
+
+    result = service.generate(
+        system_prompt="System instructions",
+        user_prompt="Patient data",
+        temperature=0.2,
+    )
+
+    assert result == "Grounded report: Mild pitch variability detected."
+    mock_gemini_client.generate_content.assert_called_once_with(
+        system_prompt="System instructions",
+        user_prompt="Patient data",
+        temperature=0.2,
+        max_tokens=1024,
+    )
+
+
+# ------------------------------------------------------------------------------
+# Dependency Provider Tests
+# ------------------------------------------------------------------------------
 
 def test_get_llm_service_dependency():
     """Verify get_llm_service retrieves instance from request.app.state."""
     class DummyApp:
         class State:
-            llm_service = "mock_llm_instance"
+            llm_service = "mock_service_instance"
         state = State()
 
     class DummyRequest:
         app = DummyApp()
 
     res = get_llm_service(DummyRequest())
-    assert res == "mock_llm_instance"
+    assert res == "mock_service_instance"
 
     # Verify exception when missing on app state
     DummyRequest.app.state.llm_service = None
     with pytest.raises(RuntimeError) as exc_info:
         get_llm_service(DummyRequest())
     assert "LLMService is not initialized" in str(exc_info.value)
-
-
-@pytest.mark.skipif(
-    not is_live_model_ready(),
-    reason="Local Ollama daemon not reachable or target model not pulled yet. "
-           "Mock unit tests ensure 100% test coverage and validation when Ollama is offline.",
-)
-def test_live_ollama_generation():
-    """Live integration test: calls local Ollama if running with target model pulled."""
-    service = LLMService()
-    system_prompt = "You are a medical speech assistant. Respond in one concise sentence."
-    user_prompt = "Define hypophonia in Parkinson's disease."
-
-    response = service.generate(
-        system_prompt=system_prompt,
-        user_prompt=user_prompt,
-        temperature=0.2,
-        max_tokens=100,
-    )
-
-    assert isinstance(response, str)
-    assert len(response.strip()) > 0
-    assert "hypophonia" in response.lower() or "voice" in response.lower() or "soft" in response.lower()
