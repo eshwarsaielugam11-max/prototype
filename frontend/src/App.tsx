@@ -11,7 +11,7 @@ import { History } from './pages/History';
 export const App: React.FC = () => {
   return (
     <BrowserRouter>
-      <div className="min-h-screen flex flex-col bg-slate-50 text-slate-800 font-sans selection:bg-blue-100 selection:text-blue-900">
+      <div className="min-h-screen flex flex-col bg-bg-void text-ink font-body selection:bg-signal-gold/20 selection:text-signal-gold">
         <NavBar />
         <Routes>
           <Route path="/" element={<Home />} />
