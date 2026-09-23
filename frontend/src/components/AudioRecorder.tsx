@@ -169,12 +169,89 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onPredictionSucces
         }
       };
 
-      recorder.onstop = () => {
-        const mime = selectedMimeType || 'audio/webm';
-        const blob = new Blob(audioChunksRef.current, { type: mime });
-        setAudioBlob(blob);
-        const url = URL.createObjectURL(blob);
-        setAudioUrl(url);
+function audioBufferToWav(buffer: AudioBuffer): Blob {
+  const numChannels = 1;
+  const sampleRate = buffer.sampleRate;
+  const format = 1; // PCM
+  const bitDepth = 16;
+
+  const numSamples = buffer.length;
+  const channelData = new Float32Array(numSamples);
+
+  if (buffer.numberOfChannels === 1) {
+    channelData.set(buffer.getChannelData(0));
+  } else {
+    for (let c = 0; c < buffer.numberOfChannels; c++) {
+      const data = buffer.getChannelData(c);
+      for (let i = 0; i < numSamples; i++) {
+        channelData[i] += data[i] / buffer.numberOfChannels;
+      }
+    }
+  }
+
+  const dataSize = numSamples * numChannels * (bitDepth / 8);
+  const bufferLength = 44 + dataSize;
+  const arrayBuffer = new ArrayBuffer(bufferLength);
+  const view = new DataView(arrayBuffer);
+
+  const writeString = (offset: number, str: string) => {
+    for (let i = 0; i < str.length; i++) {
+      view.setUint8(offset + i, str.charCodeAt(i));
+    }
+  };
+
+  /* RIFF chunk descriptor */
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + dataSize, true);
+  writeString(8, 'WAVE');
+
+  /* fmt sub-chunk */
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, format, true);
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, (sampleRate * numChannels * bitDepth) / 8, true);
+  view.setUint16(32, (numChannels * bitDepth) / 8, true);
+  view.setUint16(34, bitDepth, true);
+
+  /* data sub-chunk */
+  writeString(36, 'data');
+  view.setUint32(40, dataSize, true);
+
+  let offset = 44;
+  for (let i = 0; i < numSamples; i++) {
+    const s = Math.max(-1, Math.min(1, channelData[i]));
+    const val = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    view.setInt16(offset, val, true);
+    offset += 2;
+  }
+
+  return new Blob([arrayBuffer], { type: 'audio/wav' });
+}
+
+      recorder.onstop = async () => {
+        const rawBlob = new Blob(audioChunksRef.current, { type: selectedMimeType || 'audio/webm' });
+
+        try {
+          // Decode browser-recorded audio chunks into clean 16-bit PCM WAV
+          const arrayBuffer = await rawBlob.arrayBuffer();
+          const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+          const decodeCtx = new AudioCtx();
+          const decodedBuffer = await decodeCtx.decodeAudioData(arrayBuffer);
+          const wavBlob = audioBufferToWav(decodedBuffer);
+          if (decodeCtx.state !== 'closed') {
+            decodeCtx.close();
+          }
+          setAudioBlob(wavBlob);
+          const url = URL.createObjectURL(wavBlob);
+          setAudioUrl(url);
+        } catch (convErr) {
+          console.warn('In-browser WAV conversion fallback to raw blob:', convErr);
+          setAudioBlob(rawBlob);
+          const url = URL.createObjectURL(rawBlob);
+          setAudioUrl(url);
+        }
 
         stream.getTracks().forEach((track) => track.stop());
         if (animationFrameRef.current) {

@@ -73,14 +73,22 @@ def validate_audio_file(
     sample_rate = None
 
     try:
-        # First attempt fast soundfile decoding
+        # First attempt fast in-memory soundfile decoding
         data, sr = sf.read(io.BytesIO(audio_bytes), dtype="float32")
         waveform = data
         sample_rate = sr
     except Exception:
-        # Fallback to librosa for formats like mp3/m4a/webm requiring ffmpeg
+        # Fallback to filesystem-based librosa decoding for container formats (m4a, mp4, webm, mp3, ogg)
+        import tempfile
+        import os
+
+        tmp_path = None
         try:
-            data, sr = librosa.load(io.BytesIO(audio_bytes), sr=None, mono=False)
+            with tempfile.NamedTemporaryFile(suffix=f".{extension}", delete=False) as tmp_file:
+                tmp_file.write(audio_bytes)
+                tmp_path = tmp_file.name
+
+            data, sr = librosa.load(tmp_path, sr=None, mono=False)
             waveform = data
             sample_rate = sr
         except Exception as exc:
@@ -88,6 +96,12 @@ def validate_audio_file(
                 status_code=400,
                 detail=f"Failed to decode audio file. Corrupted header or unsupported codec: {str(exc)}",
             ) from exc
+        finally:
+            if tmp_path and os.path.exists(tmp_path):
+                try:
+                    os.remove(tmp_path)
+                except Exception:
+                    pass
 
     # Convert to mono if multichannel
     if waveform.ndim > 1:

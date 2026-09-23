@@ -74,7 +74,7 @@ class Settings(BaseSettings):
         description="Maximum permitted audio upload size in megabytes",
     )
     allowed_audio_formats: str = Field(
-        default="wav,mp3,flac,m4a,ogg",
+        default="wav,mp3,flac,m4a,ogg,webm,mp4,aac",
         description="Comma-separated list of allowed audio file extensions",
     )
 

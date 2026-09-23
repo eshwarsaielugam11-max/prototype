@@ -113,7 +113,23 @@ export async function predict(
 ): Promise<PredictResponse> {
   const formData = new FormData();
 
-  const filename = file instanceof File ? file.name : `${source}_sample.wav`;
+  let filename = `${source}_sample.wav`;
+  if (file instanceof File && file.name) {
+    filename = file.name;
+  } else if (file.type) {
+    if (file.type.includes('webm')) {
+      filename = `${source}_sample.webm`;
+    } else if (file.type.includes('mp4') || file.type.includes('m4a') || file.type.includes('aac')) {
+      filename = `${source}_sample.m4a`;
+    } else if (file.type.includes('ogg')) {
+      filename = `${source}_sample.ogg`;
+    } else if (file.type.includes('mp3') || file.type.includes('mpeg')) {
+      filename = `${source}_sample.mp3`;
+    } else if (file.type.includes('wav')) {
+      filename = `${source}_sample.wav`;
+    }
+  }
+
   formData.append('file', file, filename);
 
   if (testId && testId.trim()) {
