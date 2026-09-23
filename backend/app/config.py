@@ -32,8 +32,8 @@ class Settings(BaseSettings):
         description="API key for hosted LLM provider (Groq/Gemini/OpenRouter)",
     )
     llm_model: str = Field(
-        default="llama-3.3-70b-versatile",
-        description="Model name on target provider (e.g., 'llama-3.3-70b-versatile', 'gemini-2.5-flash')",
+        default="qwen/qwen3.8-27b",
+        description="Model name on target provider (e.g., 'qwen/qwen3.8-27b', 'gemini-2.5-flash')",
     )
     llm_base_url: str = Field(
         default="https://api.groq.com/openai/v1",
