@@ -66,6 +66,16 @@ describe('History Page', () => {
     expect(screen.getByText('Risk Indicated')).toBeInTheDocument();
     expect(screen.getByText('15.0%')).toBeInTheDocument();
     expect(screen.getByText('Low Risk')).toBeInTheDocument();
+
+    // Verify Inspect and Report links
+    const inspectLinks = screen.getAllByRole('link', { name: /Inspect/i });
+    expect(inspectLinks.length).toBe(2);
+    expect(inspectLinks[0]).toHaveAttribute('href', '/result/rec-001');
+    expect(inspectLinks[1]).toHaveAttribute('href', '/result/rec-002');
+
+    const reportLinks = screen.getAllByRole('link', { name: /Ready/i });
+    expect(reportLinks.length).toBe(1);
+    expect(reportLinks[0]).toHaveAttribute('href', '/report/rec-001');
   });
 
   it('filters items by search query', async () => {
@@ -129,9 +139,31 @@ describe('History Page', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/No Screening Sessions Recorded Yet/i)).toBeInTheDocument();
+      expect(screen.getByText('No screenings yet.')).toBeInTheDocument();
     });
 
     expect(screen.getByRole('link', { name: /Start Live Record/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Upload Audio File/i })).toBeInTheDocument();
+  });
+
+  it('renders error state when backend is unreachable', async () => {
+    vi.mocked(client.listHistory).mockRejectedValueOnce(
+      new client.ApiError(500, 'Internal server error connecting to database')
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/history']}>
+        <Routes>
+          <Route path="/history" element={<History />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/Failed to Query Screening Repository/i)).toBeInTheDocument();
+      expect(screen.getByText(/API Error \(500\)/i)).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole('button', { name: /Retry query/i })).toBeInTheDocument();
   });
 });

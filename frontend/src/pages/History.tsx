@@ -16,12 +16,12 @@ import {
   Search,
   Filter,
   User,
-  AudioWaveform,
   AlertCircle,
   ExternalLink,
   ShieldAlert,
   ArrowRight,
   Calendar,
+  Activity,
 } from 'lucide-react';
 
 export const History: React.FC = () => {
@@ -61,7 +61,7 @@ export const History: React.FC = () => {
       } else if (err instanceof Error) {
         setError(err.message);
       } else {
-        setError('Failed to connect to the backend service. Ensure server is running at http://localhost:8000.');
+        setError('Failed to connect to the backend service. Ensure the server is running at http://localhost:8000.');
       }
     } finally {
       setLoading(false);
@@ -94,61 +94,61 @@ export const History: React.FC = () => {
     });
   }, [historyItems, searchQuery, filterOutcome, filterSource]);
 
-  const offsetStart = (page - 1) * limit + 1;
+  const offsetStart = historyItems.length > 0 ? (page - 1) * limit + 1 : 0;
   const offsetEnd = (page - 1) * limit + historyItems.length;
 
   return (
     <PageContainer
-      title="Screening History &amp; Longitudinal Log"
-      subtitle="Complete chronological audit trail of vocal acoustic screenings, time-aligned rollout maps, and clinical reports."
+      title="Screening History"
+      subtitle="Chronological audit log of acoustic phonation screenings, neural risk estimations, and clinical decision support reports."
       actions={
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <Link
             to="/record"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 transition-colors shadow-sm"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded bg-signal-gold hover:bg-signal-gold-hover text-bg-void text-xs font-body font-semibold shadow-glow-gold transition-all"
           >
             <Mic className="w-3.5 h-3.5" />
-            New Recording
+            <span>New Recording</span>
           </Link>
           <button
             type="button"
             onClick={() => fetchHistoryData(page, limit)}
             disabled={loading}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-slate-300 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors shadow-subtle disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded bg-bg-panel border border-bg-panel-border text-ink-muted hover:text-ink text-xs font-body font-medium transition-colors disabled:opacity-50"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-signal-gold' : ''}`} />
+            <span>Refresh</span>
           </button>
         </div>
       }
     >
       <div className="space-y-6">
-        {/* Filter & Search Bar */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-card">
+        {/* Filter & Search Bar (Flat bg-panel, hairline borders) */}
+        <div className="bg-bg-panel rounded-lg border border-bg-panel-border p-4 sm:p-5 shadow-panel">
           <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {/* Search input */}
             <div className="sm:col-span-1 lg:col-span-2 relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Search className="w-4 h-4 text-ink-faint absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search by Patient ID or Session UUID..."
-                className="w-full pl-9 pr-3.5 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                className="w-full pl-9 pr-3.5 py-2 text-xs bg-bg-void border border-bg-panel-border rounded text-ink placeholder:text-ink-faint focus:outline-none focus:border-signal-gold focus:ring-1 focus:ring-signal-gold font-body transition-all"
               />
             </div>
 
             {/* Outcome Filter */}
             <div className="relative">
-              <Filter className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Filter className="w-3.5 h-3.5 text-ink-faint absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <select
                 value={filterOutcome}
                 onChange={(e) => setFilterOutcome(e.target.value as typeof filterOutcome)}
-                className="w-full pl-8 pr-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                className="w-full pl-8 pr-3 py-2 text-xs bg-bg-void border border-bg-panel-border rounded text-ink-muted focus:text-ink focus:outline-none focus:border-signal-gold focus:ring-1 focus:ring-signal-gold font-body transition-all"
               >
-                <option value="all">All Screening Outcomes</option>
-                <option value="parkinsons_risk_indicated">Elevated Risk Indicated</option>
-                <option value="low_risk_indicated">Low Risk Indicated</option>
+                <option value="all">All Outcomes</option>
+                <option value="parkinsons_risk_indicated">Filter: Risk Indicated</option>
+                <option value="low_risk_indicated">Filter: Low Risk</option>
               </select>
             </div>
 
@@ -157,7 +157,7 @@ export const History: React.FC = () => {
               <select
                 value={filterSource}
                 onChange={(e) => setFilterSource(e.target.value as typeof filterSource)}
-                className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                className="w-full px-3 py-2 text-xs bg-bg-void border border-bg-panel-border rounded text-ink-muted focus:text-ink focus:outline-none focus:border-signal-gold focus:ring-1 focus:ring-signal-gold font-body transition-all"
               >
                 <option value="all">All Input Modalities</option>
                 <option value="recording">Live Phonation Recording</option>
@@ -167,18 +167,19 @@ export const History: React.FC = () => {
           </div>
         </div>
 
-        {/* Error Display */}
+        {/* Error Display (Backend Unreachable or HTTP Error) */}
         {error && (
-          <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-900 text-xs flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="font-bold">Failed to Query Screening Repository</p>
-              <p className="text-red-800 mt-0.5">{error}</p>
+          <div className="p-4 rounded-lg bg-risk-elevated/10 border border-risk-elevated/40 text-ink text-xs flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-risk-elevated shrink-0 mt-0.5" />
+            <div className="flex-1 font-body">
+              <p className="font-semibold text-sm text-risk-elevated">Failed to Query Screening Repository</p>
+              <p className="text-ink-muted mt-1 leading-relaxed">{error}</p>
               <button
+                type="button"
                 onClick={() => fetchHistoryData(page, limit)}
-                className="mt-2 inline-flex items-center gap-1 font-semibold text-red-900 underline hover:no-underline"
+                className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-bg-void border border-bg-panel-border text-xs font-semibold text-ink hover:text-signal-gold transition-colors"
               >
-                <RefreshCw className="w-3 h-3" /> Retry query
+                <RefreshCw className="w-3.5 h-3.5" /> Retry query
               </button>
             </div>
           </div>
@@ -186,66 +187,79 @@ export const History: React.FC = () => {
 
         {/* Loading Skeleton */}
         {loading && (
-          <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-card text-center">
-            <RefreshCw className="w-7 h-7 text-blue-600 animate-spin mx-auto mb-3" />
-            <p className="text-xs font-semibold text-slate-700">Loading Screening Records...</p>
-            <p className="text-[11px] text-slate-400 mt-0.5">Fetching from local SQLite repository</p>
+          <div className="bg-bg-panel rounded-lg border border-bg-panel-border p-12 shadow-panel text-center">
+            <Activity className="w-8 h-8 text-signal-gold animate-spin mx-auto mb-3" />
+            <p className="text-sm font-semibold text-ink font-body">Loading Screening Records...</p>
+            <p className="text-xs text-ink-muted mt-1 font-mono">Querying historical records from local SQLite repository</p>
           </div>
         )}
 
-        {/* Empty State (No records in DB or no search matches) */}
+        {/* Empty State (Treat emptiness as direction, not mood — no decorative illustrations) */}
         {!loading && !error && filteredRecords.length === 0 && (
-          <div className="bg-white rounded-2xl border border-slate-200 p-10 sm:p-12 shadow-card text-center max-w-lg mx-auto">
-            <div className="w-14 h-14 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-4">
-              <AudioWaveform className="w-7 h-7" />
-            </div>
-            <h3 className="text-base font-bold text-slate-900 mb-1.5">
+          <div className="bg-bg-panel rounded-lg border border-bg-panel-border p-10 sm:p-12 shadow-panel text-center max-w-lg mx-auto">
+            <h3 className="text-lg font-display font-medium text-ink mb-2">
               {searchQuery || filterOutcome !== 'all' || filterSource !== 'all'
-                ? 'No Records Match Filter'
-                : 'No Screening Sessions Recorded Yet'}
+                ? 'No matching records found'
+                : 'No screenings yet.'}
             </h3>
-            <p className="text-xs text-slate-500 mb-6 max-w-sm mx-auto leading-relaxed">
+            <p className="text-xs sm:text-sm text-ink-muted mb-6 font-body leading-relaxed">
               {searchQuery || filterOutcome !== 'all' || filterSource !== 'all'
-                ? 'Try resetting your search query or selecting "All Screening Outcomes".'
-                : 'Begin a new screening session by recording sustained vowel phonation (/a/) or uploading an audio clip.'}
+                ? 'Try adjusting your search criteria or resetting filters to view past runs.'
+                : 'Perform an acoustic screening by recording live phonation (/a/) or uploading an audio file to view historical records.'}
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Link
-                to="/record"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-sm transition-all"
-              >
-                <Mic className="w-3.5 h-3.5" />
-                Start Live Record
-              </Link>
-              <Link
-                to="/upload"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors"
-              >
-                <UploadCloud className="w-3.5 h-3.5" />
-                Upload Audio File
-              </Link>
+              {searchQuery || filterOutcome !== 'all' || filterSource !== 'all' ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setFilterOutcome('all');
+                    setFilterSource('all');
+                  }}
+                  className="px-4 py-2 rounded bg-signal-gold hover:bg-signal-gold-hover text-bg-void font-semibold text-xs font-body transition-all"
+                >
+                  Reset Filters
+                </button>
+              ) : (
+                <>
+                  <Link
+                    to="/record"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded bg-signal-gold hover:bg-signal-gold-hover text-bg-void font-semibold text-xs font-body shadow-glow-gold transition-all"
+                  >
+                    <Mic className="w-3.5 h-3.5" />
+                    <span>Start Live Record</span>
+                  </Link>
+                  <Link
+                    to="/upload"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded bg-bg-panel-elevated hover:bg-bg-panel-border text-ink font-medium text-xs font-body border border-bg-panel-border transition-colors"
+                  >
+                    <UploadCloud className="w-3.5 h-3.5 text-ink-muted" />
+                    <span>Upload Audio File</span>
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         )}
 
-        {/* Desktop / Tablet Structured Table */}
+        {/* Structured Table (Clarity-First, Dark Editorial Surface) */}
         {!loading && !error && filteredRecords.length > 0 && (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-card overflow-hidden">
+          <div className="bg-bg-panel rounded-lg border border-bg-panel-border shadow-panel overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="bg-slate-50/90 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                    <th className="py-3.5 px-4">Date &amp; Time</th>
-                    <th className="py-3.5 px-4">Patient / Session ID</th>
-                    <th className="py-3.5 px-3">Modality</th>
-                    <th className="py-3.5 px-4">Screening Outcome</th>
-                    <th className="py-3.5 px-4 text-right">Acoustic Score</th>
-                    <th className="py-3.5 px-3 text-center">Report</th>
-                    <th className="py-3.5 px-4 text-right">Actions</th>
+                  <tr className="bg-bg-void/60 border-b border-bg-panel-border text-[11px] font-medium text-ink-muted uppercase tracking-wider">
+                    <th className="py-3.5 px-4 font-body">Date &amp; Time</th>
+                    <th className="py-3.5 px-4 font-body">Patient / Session ID</th>
+                    <th className="py-3.5 px-3 font-body">Modality</th>
+                    <th className="py-3.5 px-4 font-body">Screening Outcome</th>
+                    <th className="py-3.5 px-4 text-right font-body">Acoustic Score</th>
+                    <th className="py-3.5 px-3 text-center font-body">Report</th>
+                    <th className="py-3.5 px-4 text-right font-body">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-bg-panel-border">
                   {filteredRecords.map((item) => {
                     const isElevated = item.prediction === 'parkinsons_risk_indicated';
                     const probPct = (item.probability * 100).toFixed(1);
@@ -254,15 +268,15 @@ export const History: React.FC = () => {
                     return (
                       <tr
                         key={item.id}
-                        className="hover:bg-blue-50/30 transition-colors group"
+                        className="hover:bg-bg-panel-elevated/80 transition-colors group"
                       >
                         {/* Date & Time */}
                         <td className="py-3.5 px-4 whitespace-nowrap">
-                          <div className="flex items-center gap-2 font-medium text-slate-900">
-                            <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                          <div className="flex items-center gap-2 font-medium text-ink font-body">
+                            <Calendar className="w-3.5 h-3.5 text-signal-gold shrink-0" />
                             <span>{dateObj.toLocaleDateString()}</span>
                           </div>
-                          <div className="text-[11px] text-slate-400 font-mono ml-5.5">
+                          <div className="text-[11px] text-ink-faint font-mono ml-5.5 mt-0.5">
                             {dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                           </div>
                         </td>
@@ -270,14 +284,14 @@ export const History: React.FC = () => {
                         {/* Patient / Session Ref ID */}
                         <td className="py-3.5 px-4">
                           {item.test_id ? (
-                            <div className="font-semibold text-slate-800 flex items-center gap-1.5">
-                              <User className="w-3.5 h-3.5 text-slate-400" />
-                              <span className="truncate max-w-[130px]">{item.test_id}</span>
+                            <div className="font-semibold text-ink flex items-center gap-1.5 font-mono">
+                              <User className="w-3.5 h-3.5 text-signal-blue shrink-0" />
+                              <span className="truncate max-w-[140px]">{item.test_id}</span>
                             </div>
                           ) : (
-                            <span className="text-slate-400 font-mono">&mdash;</span>
+                            <span className="text-ink-faint font-mono">&mdash;</span>
                           )}
-                          <span className="text-[10px] text-slate-400 font-mono block truncate max-w-[130px]" title={item.id}>
+                          <span className="text-[10px] text-ink-faint font-mono block truncate max-w-[140px] mt-0.5" title={item.id}>
                             {item.id}
                           </span>
                         </td>
@@ -285,26 +299,26 @@ export const History: React.FC = () => {
                         {/* Modality */}
                         <td className="py-3.5 px-3 whitespace-nowrap">
                           {item.source === 'recording' ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-bg-void text-signal-gold border border-bg-panel-border font-body">
                               <Mic className="w-3 h-3" /> Live
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200">
-                              <UploadCloud className="w-3 h-3" /> Upload
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-bg-void text-ink-muted border border-bg-panel-border font-body">
+                              <UploadCloud className="w-3 h-3 text-ink-faint" /> Upload
                             </span>
                           )}
                         </td>
 
-                        {/* Screening Outcome (Strict Non-Diagnostic Language) */}
+                        {/* Screening Outcome (Strict Non-Diagnostic Language + Color + Text Badge) */}
                         <td className="py-3.5 px-4 whitespace-nowrap">
                           {isElevated ? (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-red-50 text-red-700 border border-red-200">
-                              <span className="w-2 h-2 rounded-full bg-red-600 shrink-0" />
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono font-semibold bg-risk-elevated/15 text-risk-elevated border border-risk-elevated/40">
+                              <span className="w-1.5 h-1.5 rounded-full bg-risk-elevated shrink-0 animate-pulse" />
                               Risk Indicated
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                              <span className="w-2 h-2 rounded-full bg-emerald-600 shrink-0" />
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono font-semibold bg-risk-low/15 text-risk-low border border-risk-low/40">
+                              <span className="w-1.5 h-1.5 rounded-full bg-risk-low shrink-0" />
                               Low Risk
                             </span>
                           )}
@@ -314,12 +328,12 @@ export const History: React.FC = () => {
                         <td className="py-3.5 px-4 text-right whitespace-nowrap">
                           <span
                             className={`font-mono font-bold text-sm ${
-                              isElevated ? 'text-red-600' : 'text-emerald-600'
+                              isElevated ? 'text-risk-elevated' : 'text-risk-low'
                             }`}
                           >
                             {probPct}%
                           </span>
-                          <span className="text-[10px] text-slate-400 block font-mono">
+                          <span className="text-[10px] text-ink-faint block font-mono mt-0.5">
                             {item.audio_duration_sec.toFixed(1)}s
                           </span>
                         </td>
@@ -329,15 +343,15 @@ export const History: React.FC = () => {
                           {item.has_report ? (
                             <Link
                               to={`/report/${item.id}`}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors"
-                              title="Click to view full decision support report"
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-risk-low/15 text-risk-low border border-risk-low/40 hover:bg-risk-low/25 transition-colors font-body"
+                              title="View Decision Support Report"
                             >
                               <FileText className="w-3 h-3" />
                               <span>Ready</span>
                             </Link>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-400 border border-slate-200">
-                              None
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-bg-void text-ink-faint border border-bg-panel-border font-body">
+                              &mdash;
                             </span>
                           )}
                         </td>
@@ -347,16 +361,17 @@ export const History: React.FC = () => {
                           <div className="flex items-center justify-end gap-1.5">
                             <Link
                               to={`/result/${item.id}`}
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-medium transition-colors border border-slate-200"
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded bg-bg-void hover:bg-bg-panel-border text-ink-muted hover:text-ink text-xs font-body font-medium transition-colors border border-bg-panel-border"
+                              title="Inspect Screening Result"
                             >
                               <span>Inspect</span>
-                              <ArrowRight className="w-3 h-3" />
+                              <ArrowRight className="w-3 h-3 text-signal-gold" />
                             </Link>
                             {item.has_report && (
                               <Link
                                 to={`/report/${item.id}`}
-                                className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors border border-emerald-200"
-                                title="Open Clinical Report"
+                                className="p-1.5 rounded bg-bg-void hover:bg-risk-low/20 text-risk-low border border-bg-panel-border transition-colors"
+                                title="Open Synthesized Clinical Report"
                               >
                                 <ExternalLink className="w-3.5 h-3.5" />
                               </Link>
@@ -371,21 +386,21 @@ export const History: React.FC = () => {
             </div>
 
             {/* Pagination Controls Footer */}
-            <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600">
+            <div className="bg-bg-void/60 px-4 py-3 border-t border-bg-panel-border flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-ink-muted font-body">
               <div className="flex items-center gap-3">
                 <span>
-                  Showing <strong>{historyItems.length > 0 ? offsetStart : 0}</strong> &ndash; <strong>{offsetEnd}</strong> records
+                  Showing <strong className="text-ink font-mono">{offsetStart}</strong> &ndash; <strong className="text-ink font-mono">{offsetEnd}</strong> records
                 </span>
 
                 <div className="flex items-center gap-1.5 ml-2">
-                  <span className="text-slate-400 text-[11px]">Per page:</span>
+                  <span className="text-ink-faint text-[11px]">Per page:</span>
                   <select
                     value={limit}
                     onChange={(e) => {
                       setLimit(Number(e.target.value));
                       setPage(1);
                     }}
-                    className="px-2 py-1 text-xs bg-white border border-slate-300 rounded font-medium focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="px-2 py-1 text-xs bg-bg-void border border-bg-panel-border rounded text-ink font-mono focus:outline-none focus:border-signal-gold"
                   >
                     <option value={10}>10</option>
                     <option value={25}>25</option>
@@ -400,13 +415,13 @@ export const History: React.FC = () => {
                   type="button"
                   onClick={() => setPage((p) => Math.max(p - 1, 1))}
                   disabled={page === 1 || loading}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-slate-700 font-medium hover:bg-slate-100 transition-colors disabled:opacity-40 disabled:pointer-events-none shadow-xs"
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded bg-bg-void border border-bg-panel-border text-ink-muted hover:text-ink font-medium transition-colors disabled:opacity-30 disabled:pointer-events-none"
                 >
                   <ChevronLeft className="w-3.5 h-3.5" />
                   <span>Previous</span>
                 </button>
 
-                <span className="px-2 font-mono font-semibold text-slate-800">
+                <span className="px-2 font-mono font-semibold text-ink">
                   Page {page}
                 </span>
 
@@ -414,7 +429,7 @@ export const History: React.FC = () => {
                   type="button"
                   onClick={() => setPage((p) => p + 1)}
                   disabled={!hasMore || loading}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-slate-700 font-medium hover:bg-slate-100 transition-colors disabled:opacity-40 disabled:pointer-events-none shadow-xs"
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded bg-bg-void border border-bg-panel-border text-ink-muted hover:text-ink font-medium transition-colors disabled:opacity-30 disabled:pointer-events-none"
                 >
                   <span>Next</span>
                   <ChevronRight className="w-3.5 h-3.5" />
@@ -424,11 +439,11 @@ export const History: React.FC = () => {
           </div>
         )}
 
-        {/* Disclaimer Line */}
-        <div className="p-4 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-600 flex items-start gap-2.5">
-          <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+        {/* Disclaimer & Privacy Notice */}
+        <div className="p-4 rounded bg-bg-panel/60 border border-bg-panel-border text-xs text-ink-muted flex items-start gap-2.5 font-body">
+          <ShieldAlert className="w-4 h-4 text-signal-gold shrink-0 mt-0.5" />
           <p className="leading-relaxed">
-            <strong>Audit &amp; Privacy Notice:</strong> Raw audio waveforms are never saved to disk and are purged from memory immediately post-inference. Only mathematical attention rollouts and non-diagnostic risk scores are preserved for clinical continuity.
+            <strong className="text-ink font-medium">Audit &amp; Privacy Notice:</strong> Raw audio waveforms are never saved to disk and are purged from memory immediately post-inference. Only mathematical attention rollouts and non-diagnostic risk scores are preserved for longitudinal review.
           </p>
         </div>
       </div>
