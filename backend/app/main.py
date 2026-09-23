@@ -15,11 +15,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from backend.app.api.health import router as health_router
+from backend.app.api.history import router as history_router
+from backend.app.api.predict import router as predict_router
+from backend.app.api.report import router as report_router
 from backend.app.config import Settings, get_settings
 from backend.app.db.init_db import init_db
 from backend.app.services.inference import InferenceService
 from backend.app.services.llm import LLMService
 from backend.app.services.rag import RAGService
+from backend.app.services.report import ReportService
 
 
 def setup_logging(log_level: str = "INFO") -> None:
@@ -42,6 +46,7 @@ logger = logging.getLogger("parkinsons_platform.backend")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan managing startup and shutdown hooks."""
+    settings = get_settings()
     # Startup: Auto-create database tables
     logger.info("Running application startup lifecycle...")
     try:
@@ -98,6 +103,19 @@ async def lifespan(app: FastAPI):
         )
         app.state.llm_service = None
         app.state.llm_available = False
+
+    # Initialize clinical ReportService
+    try:
+        logger.info("Initializing clinical ReportService...")
+        app.state.report_service = ReportService(
+            rag_service=getattr(app.state, "rag_service", None),
+            llm_service=getattr(app.state, "llm_service", None),
+            settings=settings,
+        )
+        logger.info("Clinical ReportService successfully mounted on app.state.")
+    except Exception as e:
+        logger.warning("ReportService initialization failed during startup: %s", e)
+        app.state.report_service = None
 
     yield
 
@@ -213,6 +231,9 @@ def create_app() -> FastAPI:
     # 5. Wire Routers
     api_v1_prefix = "/api/v1"
     app.include_router(health_router, prefix=api_v1_prefix)
+    app.include_router(predict_router, prefix=api_v1_prefix)
+    app.include_router(report_router, prefix=api_v1_prefix)
+    app.include_router(history_router, prefix=api_v1_prefix)
 
     # 6. Root Index Endpoint
     @app.get("/", tags=["Root"])

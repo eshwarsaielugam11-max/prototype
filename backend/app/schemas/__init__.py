@@ -1,5 +1,6 @@
 """Pydantic schemas package."""
 
+from backend.app.schemas.predict import PredictResponse
 from backend.app.schemas.report import (
     EvidenceChunk,
     GeneratedExplanation,
@@ -14,6 +15,7 @@ from backend.app.schemas.test_record import (
 )
 
 __all__ = [
+    "PredictResponse",
     "TestRecordBase",
     "TestRecordCreate",
     "TestRecordListItem",
