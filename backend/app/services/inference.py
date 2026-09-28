@@ -28,7 +28,7 @@ from transformers import WavLMModel
 from backend.app.config import Settings, get_settings
 from backend.app.services.audio_validation import validate_audio_file
 from ml.explainability.attention_rollout import compute_time_aligned_attention
-from ml.model_def.model import ModelConfig, ParkinsonsVoiceClassifier
+from ml.model_def.model import ModelConfig, ParkinsonsVoiceClassifier, load_trained_model
 from ml.preprocessing.audio_preprocessing import PreprocessConfig, preprocess_audio
 
 logger = logging.getLogger("parkinsons_platform.inference")
@@ -150,19 +150,25 @@ class InferenceService:
 
     def _load_from_state_dict(self, artifact_dir: Path, export_artifacts: Dict[str, Any]) -> torch.nn.Module:
         """Fallback loader initializing raw architecture and restoring state_dict."""
-        sd_filename = export_artifacts.get("state_dict", "model_state_dict.pt")
-        sd_path = artifact_dir / sd_filename
-        if not sd_path.exists():
+        candidates = [
+            export_artifacts.get("state_dict"),
+            export_artifacts.get("pytorch_state_dict"),
+            "model_state_dict.pt",
+            "best_model.pt",
+        ]
+        sd_path = None
+        for cand in candidates:
+            if cand:
+                p = artifact_dir / cand
+                if p.exists():
+                    sd_path = p
+                    break
+
+        if sd_path is None or not sd_path.exists():
             raise FileNotFoundError(f"Neither TorchScript model nor state_dict found in {artifact_dir}")
 
-        model_cfg_data = self.config.get("model_config", {})
-        model_config = ModelConfig.from_dict(model_cfg_data)
-        model = ParkinsonsVoiceClassifier(config=model_config)
-        state_dict = torch.load(str(sd_path), map_location=self.device)
-        model.load_state_dict(state_dict)
-        model.to(self.device)
-        model.eval()
-        model.requires_grad_(False)
+        logger.info("Loading PyTorch state_dict from %s...", sd_path)
+        model = load_trained_model(checkpoint_path=sd_path, device=str(self.device))
         return model
 
     def _determine_risk_tier(self, probability: float) -> str:
