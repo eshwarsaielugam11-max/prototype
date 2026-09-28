@@ -77,6 +77,10 @@ class Settings(BaseSettings):
         default="wav,mp3,flac,m4a,ogg,webm,mp4,aac",
         description="Comma-separated list of allowed audio file extensions",
     )
+    debug_save_audio: bool = Field(
+        default=False,
+        description="Off-by-default flag to save temporary debug audio for live diagnostics to data/debug",
+    )
 
     # Server Network Settings
     backend_host: str = Field(

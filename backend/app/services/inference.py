@@ -17,6 +17,7 @@ import json
 import logging
 import os
 import tempfile
+import time
 from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
@@ -199,6 +200,17 @@ class InferenceService:
             temp_file.write(audio_bytes)
             temp_file.flush()
             temp_file.close()
+
+            # Optional privacy-compliant debug audio capture (off by default)
+            if getattr(self.settings, "debug_save_audio", False):
+                try:
+                    debug_dir = Path("data/debug")
+                    debug_dir.mkdir(parents=True, exist_ok=True)
+                    debug_path = debug_dir / f"{int(time.time() * 1000)}_{Path(filename).name}"
+                    debug_path.write_bytes(audio_bytes)
+                    logger.info("DEBUG_SAVE_AUDIO enabled: saved %s (%d bytes)", debug_path, len(audio_bytes))
+                except Exception as dbg_err:
+                    logger.warning("Failed to save debug audio: %s", dbg_err)
 
             # 1. Validate audio format, size, duration, and silence energy
             waveform, sample_rate, original_duration_sec = validate_audio_file(

@@ -253,9 +253,9 @@ export const Result: React.FC = () => {
             </div>
 
             {/* Probability Score Pill */}
-            <div className="flex flex-col items-center justify-center p-5 rounded bg-bg-void border border-bg-panel-border shadow-inner shrink-0 min-w-[210px]">
-              <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider mb-1 font-body">
-                Risk Probability Score
+            <div className="flex flex-col items-center justify-center p-5 rounded bg-bg-void border border-bg-panel-border shadow-inner shrink-0 min-w-[220px]">
+              <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider mb-1 font-body text-center">
+                Risk Probability P(PD)
               </span>
               <div className="flex items-baseline gap-1">
                 <span
@@ -274,8 +274,8 @@ export const Result: React.FC = () => {
                   style={{ width: `${probPercent}%` }}
                 />
               </div>
-              <span className="text-[10px] text-ink-muted mt-1.5 font-mono">
-                Decision Threshold: {threshPercent}%
+              <span className="text-[10px] text-ink-muted mt-1.5 font-mono text-center">
+                Threshold: {threshPercent}% • {isElevatedRisk ? 'Elevated PD Risk' : `Healthy Conf: ${(100 - parseFloat(probPercent)).toFixed(1)}%`}
               </span>
             </div>
           </div>

@@ -7,6 +7,55 @@ interface AudioRecorderProps {
   onPredictionSuccess?: (result: PredictResponse) => void;
 }
 
+/**
+ * Encode uncompressed mono Float32 audio samples into a standard 16-bit PCM WAV Blob.
+ */
+function encodeWavFromFloat32(channelData: Float32Array, sampleRate: number): Blob {
+  const numChannels = 1;
+  const format = 1; // 1 = PCM uncompressed
+  const bitDepth = 16;
+  const numSamples = channelData.length;
+  const dataSize = numSamples * numChannels * (bitDepth / 8);
+  const bufferLength = 44 + dataSize;
+  const arrayBuffer = new ArrayBuffer(bufferLength);
+  const view = new DataView(arrayBuffer);
+
+  const writeString = (offset: number, str: string) => {
+    for (let i = 0; i < str.length; i++) {
+      view.setUint8(offset + i, str.charCodeAt(i));
+    }
+  };
+
+  /* RIFF chunk descriptor */
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + dataSize, true);
+  writeString(8, 'WAVE');
+
+  /* fmt sub-chunk */
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, format, true);
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, (sampleRate * numChannels * bitDepth) / 8, true);
+  view.setUint16(32, (numChannels * bitDepth) / 8, true);
+  view.setUint16(34, bitDepth, true);
+
+  /* data sub-chunk */
+  writeString(36, 'data');
+  view.setUint32(40, dataSize, true);
+
+  let offset = 44;
+  for (let i = 0; i < numSamples; i++) {
+    const s = Math.max(-1, Math.min(1, channelData[i]));
+    const val = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    view.setInt16(offset, val, true);
+    offset += 2;
+  }
+
+  return new Blob([arrayBuffer], { type: 'audio/wav' });
+}
+
 export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onPredictionSuccess }) => {
   const navigate = useNavigate();
 
@@ -22,9 +71,14 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onPredictionSucces
   const [error, setError] = useState<string | null>(null);
   const [micDenied, setMicDenied] = useState<boolean>(false);
 
-  // Audio Context & MediaRecorder references
+  // Audio Context, PCM chunks & MediaRecorder references
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const pcmChunksRef = useRef<Float32Array[]>([]);
+  const isRecordingRef = useRef<boolean>(false);
+  const audioWorkletNodeRef = useRef<AudioNode | null>(null);
+  const scriptProcessorRef = useRef<ScriptProcessorNode | null>(null);
+  const captureMethodRef = useRef<'worklet' | 'scriptProcessor' | 'mediaRecorder'>('worklet');
   const timerIntervalRef = useRef<number | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -114,6 +168,8 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onPredictionSucces
     setError(null);
     setMicDenied(false);
     audioChunksRef.current = [];
+    pcmChunksRef.current = [];
+    isRecordingRef.current = false;
 
     if (audioUrl) {
       URL.revokeObjectURL(audioUrl);
@@ -123,10 +179,10 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onPredictionSucces
     setDuration(0);
 
     try {
+      // High-fidelity acoustic constraints: single channel, disable all hardware DSP modifications
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           channelCount: 1,
-          sampleRate: 16000,
           echoCancellation: false,
           noiseSuppression: false,
           autoGainControl: false,
@@ -145,122 +201,195 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onPredictionSucces
       source.connect(analyser);
       analyserRef.current = analyser;
 
-      const mimeTypes = [
-        'audio/webm;codecs=opus',
-        'audio/webm',
-        'audio/ogg;codecs=opus',
-        'audio/mp4',
-      ];
-      let selectedMimeType = '';
-      for (const mime of mimeTypes) {
-        if (MediaRecorder.isTypeSupported(mime)) {
-          selectedMimeType = mime;
-          break;
-        }
-      }
+      isRecordingRef.current = true;
+      let pcmActive = false;
 
-      const recorder = selectedMimeType
-        ? new MediaRecorder(stream, { mimeType: selectedMimeType })
-        : new MediaRecorder(stream);
-
-      recorder.ondataavailable = (event) => {
-        if (event.data && event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
-
-function audioBufferToWav(buffer: AudioBuffer): Blob {
-  const numChannels = 1;
-  const sampleRate = buffer.sampleRate;
-  const format = 1; // PCM
-  const bitDepth = 16;
-
-  const numSamples = buffer.length;
-  const channelData = new Float32Array(numSamples);
-
-  if (buffer.numberOfChannels === 1) {
-    channelData.set(buffer.getChannelData(0));
-  } else {
-    for (let c = 0; c < buffer.numberOfChannels; c++) {
-      const data = buffer.getChannelData(c);
-      for (let i = 0; i < numSamples; i++) {
-        channelData[i] += data[i] / buffer.numberOfChannels;
-      }
-    }
-  }
-
-  const dataSize = numSamples * numChannels * (bitDepth / 8);
-  const bufferLength = 44 + dataSize;
-  const arrayBuffer = new ArrayBuffer(bufferLength);
-  const view = new DataView(arrayBuffer);
-
-  const writeString = (offset: number, str: string) => {
-    for (let i = 0; i < str.length; i++) {
-      view.setUint8(offset + i, str.charCodeAt(i));
-    }
-  };
-
-  /* RIFF chunk descriptor */
-  writeString(0, 'RIFF');
-  view.setUint32(4, 36 + dataSize, true);
-  writeString(8, 'WAVE');
-
-  /* fmt sub-chunk */
-  writeString(12, 'fmt ');
-  view.setUint32(16, 16, true);
-  view.setUint16(20, format, true);
-  view.setUint16(22, numChannels, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, (sampleRate * numChannels * bitDepth) / 8, true);
-  view.setUint16(32, (numChannels * bitDepth) / 8, true);
-  view.setUint16(34, bitDepth, true);
-
-  /* data sub-chunk */
-  writeString(36, 'data');
-  view.setUint32(40, dataSize, true);
-
-  let offset = 44;
-  for (let i = 0; i < numSamples; i++) {
-    const s = Math.max(-1, Math.min(1, channelData[i]));
-    const val = s < 0 ? s * 0x8000 : s * 0x7FFF;
-    view.setInt16(offset, val, true);
-    offset += 2;
-  }
-
-  return new Blob([arrayBuffer], { type: 'audio/wav' });
-}
-
-      recorder.onstop = async () => {
-        const rawBlob = new Blob(audioChunksRef.current, { type: selectedMimeType || 'audio/webm' });
-
+      // 1. Preferred capture: Uncompressed PCM via AudioWorklet
+      if (audioCtx.audioWorklet && typeof audioCtx.audioWorklet.addModule === 'function') {
         try {
-          // Decode browser-recorded audio chunks into clean 16-bit PCM WAV
-          const arrayBuffer = await rawBlob.arrayBuffer();
-          const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-          const decodeCtx = new AudioCtx();
-          const decodedBuffer = await decodeCtx.decodeAudioData(arrayBuffer);
-          const wavBlob = audioBufferToWav(decodedBuffer);
-          if (decodeCtx.state !== 'closed') {
-            decodeCtx.close();
+          const workletCode = `
+            class PCMCaptureProcessor extends AudioWorkletProcessor {
+              process(inputs) {
+                const input = inputs[0];
+                if (input && input[0]) {
+                  this.port.postMessage(input[0]);
+                }
+                return true;
+              }
+            }
+            registerProcessor('pcm-capture-processor', PCMCaptureProcessor);
+          `;
+          const blob = new Blob([workletCode], { type: 'application/javascript' });
+          const workletUrl = URL.createObjectURL(blob);
+          await audioCtx.audioWorklet.addModule(workletUrl);
+          URL.revokeObjectURL(workletUrl);
+
+          const workletNode = new AudioWorkletNode(audioCtx, 'pcm-capture-processor');
+          workletNode.port.onmessage = (event: MessageEvent<Float32Array>) => {
+            if (isRecordingRef.current && event.data) {
+              pcmChunksRef.current.push(new Float32Array(event.data));
+            }
+          };
+          source.connect(workletNode);
+          audioWorkletNodeRef.current = workletNode;
+          captureMethodRef.current = 'worklet';
+          pcmActive = true;
+        } catch (workletErr) {
+          console.warn('[AudioRecorder] AudioWorklet setup failed, attempting ScriptProcessor fallback:', workletErr);
+        }
+      }
+
+      // 2. Secondary capture: ScriptProcessor fallback for uncompressed PCM
+      if (!pcmActive && typeof audioCtx.createScriptProcessor === 'function') {
+        try {
+          const scriptProcessor = audioCtx.createScriptProcessor(4096, 1, 1);
+          scriptProcessor.onaudioprocess = (e: AudioProcessingEvent) => {
+            if (isRecordingRef.current) {
+              const inputData = e.inputBuffer.getChannelData(0);
+              pcmChunksRef.current.push(new Float32Array(inputData));
+            }
+          };
+          source.connect(scriptProcessor);
+          scriptProcessor.connect(audioCtx.destination);
+          scriptProcessorRef.current = scriptProcessor;
+          captureMethodRef.current = 'scriptProcessor';
+          pcmActive = true;
+        } catch (scriptErr) {
+          console.warn('[AudioRecorder] ScriptProcessor fallback failed:', scriptErr);
+        }
+      }
+
+      function audioBufferToWav(buffer: AudioBuffer): Blob {
+        const numChannels = 1;
+        const sampleRate = buffer.sampleRate;
+        const format = 1; // PCM
+        const bitDepth = 16;
+        const numSamples = buffer.length;
+        const channelData = new Float32Array(numSamples);
+
+        if (buffer.numberOfChannels === 1) {
+          channelData.set(buffer.getChannelData(0));
+        } else {
+          for (let c = 0; c < buffer.numberOfChannels; c++) {
+            const data = buffer.getChannelData(c);
+            for (let i = 0; i < numSamples; i++) {
+              channelData[i] += data[i] / buffer.numberOfChannels;
+            }
           }
-          setAudioBlob(wavBlob);
-          const url = URL.createObjectURL(wavBlob);
-          setAudioUrl(url);
-        } catch (convErr) {
-          console.warn('In-browser WAV conversion fallback to raw blob:', convErr);
-          setAudioBlob(rawBlob);
-          const url = URL.createObjectURL(rawBlob);
-          setAudioUrl(url);
         }
 
-        stream.getTracks().forEach((track) => track.stop());
-        if (animationFrameRef.current) {
-          cancelAnimationFrame(animationFrameRef.current);
-        }
-      };
+        const dataSize = numSamples * numChannels * (bitDepth / 8);
+        const bufferLength = 44 + dataSize;
+        const arrayBuffer = new ArrayBuffer(bufferLength);
+        const view = new DataView(arrayBuffer);
 
-      mediaRecorderRef.current = recorder;
-      recorder.start(100);
+        const writeString = (offset: number, str: string) => {
+          for (let i = 0; i < str.length; i++) {
+            view.setUint8(offset + i, str.charCodeAt(i));
+          }
+        };
+
+        writeString(0, 'RIFF');
+        view.setUint32(4, 36 + dataSize, true);
+        writeString(8, 'WAVE');
+        writeString(12, 'fmt ');
+        view.setUint32(16, 16, true);
+        view.setUint16(20, format, true);
+        view.setUint16(22, numChannels, true);
+        view.setUint32(24, sampleRate, true);
+        view.setUint32(28, (sampleRate * numChannels * bitDepth) / 8, true);
+        view.setUint16(32, (numChannels * bitDepth) / 8, true);
+        view.setUint16(34, bitDepth, true);
+        writeString(36, 'data');
+        view.setUint32(40, dataSize, true);
+
+        let offset = 44;
+        for (let i = 0; i < numSamples; i++) {
+          const s = Math.max(-1, Math.min(1, channelData[i]));
+          const val = s < 0 ? s * 0x8000 : s * 0x7FFF;
+          view.setInt16(offset, val, true);
+          offset += 2;
+        }
+
+        return new Blob([arrayBuffer], { type: 'audio/wav' });
+      }
+
+      // 3. Fallback or parallel harness: MediaRecorder
+      if (typeof MediaRecorder !== 'undefined') {
+        if (!pcmActive) {
+          console.warn('[AudioRecorder] Using MediaRecorder as last-resort fallback (lossy codec)');
+          captureMethodRef.current = 'mediaRecorder';
+        }
+
+        const mimeTypes = [
+          'audio/webm;codecs=opus',
+          'audio/webm',
+          'audio/ogg;codecs=opus',
+          'audio/mp4',
+        ];
+        let selectedMimeType = '';
+        for (const mime of mimeTypes) {
+          if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(mime)) {
+            selectedMimeType = mime;
+            break;
+          }
+        }
+
+        const recorder = selectedMimeType
+          ? new MediaRecorder(stream, { mimeType: selectedMimeType })
+          : new MediaRecorder(stream);
+
+        recorder.ondataavailable = (event: any) => {
+          if (event.data && event.data.size > 0) {
+            audioChunksRef.current.push(event.data);
+          }
+        };
+
+        recorder.onstop = async () => {
+          // If uncompressed PCM was captured, encode directly to 16-bit WAV
+          if (pcmChunksRef.current.length > 0 && audioContextRef.current) {
+            const sampleRate = audioContextRef.current.sampleRate || 16000;
+            const totalLength = pcmChunksRef.current.reduce((acc, chunk) => acc + chunk.length, 0);
+            const fullFloatArray = new Float32Array(totalLength);
+            let offset = 0;
+            for (const chunk of pcmChunksRef.current) {
+              fullFloatArray.set(chunk, offset);
+              offset += chunk.length;
+            }
+            const wavBlob = encodeWavFromFloat32(fullFloatArray, sampleRate);
+            setAudioBlob(wavBlob);
+            setAudioUrl(URL.createObjectURL(wavBlob));
+          } else if (audioChunksRef.current.length > 0) {
+            // MediaRecorder fallback decoding
+            const rawBlob = new Blob(audioChunksRef.current, { type: selectedMimeType || 'audio/webm' });
+            try {
+              const arrayBuffer = await rawBlob.arrayBuffer();
+              const AudioCtxClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+              const decodeCtx = new AudioCtxClass();
+              const decodedBuffer = await decodeCtx.decodeAudioData(arrayBuffer);
+              const wavBlob = audioBufferToWav(decodedBuffer);
+              if (decodeCtx.state !== 'closed') {
+                decodeCtx.close();
+              }
+              setAudioBlob(wavBlob);
+              setAudioUrl(URL.createObjectURL(wavBlob));
+            } catch (convErr) {
+              console.warn('[AudioRecorder] In-browser WAV conversion fallback to raw blob:', convErr);
+              setAudioBlob(rawBlob);
+              setAudioUrl(URL.createObjectURL(rawBlob));
+            }
+          }
+
+          stream.getTracks().forEach((track) => track.stop());
+          if (animationFrameRef.current) {
+            cancelAnimationFrame(animationFrameRef.current);
+          }
+        };
+
+        mediaRecorderRef.current = recorder;
+        recorder.start(100);
+      }
+
       setIsRecording(true);
 
       const startTime = Date.now();
@@ -284,19 +413,48 @@ function audioBufferToWav(buffer: AudioBuffer): Blob {
 
   // Stop Recording
   const stopRecording = () => {
+    isRecordingRef.current = false;
+
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current);
       timerIntervalRef.current = null;
     }
 
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
+    if (audioWorkletNodeRef.current) {
+      audioWorkletNodeRef.current.disconnect();
+      audioWorkletNodeRef.current = null;
     }
 
-    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-      audioContextRef.current.close();
+    if (scriptProcessorRef.current) {
+      scriptProcessorRef.current.disconnect();
+      scriptProcessorRef.current = null;
     }
+
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop();
+    } else if (pcmChunksRef.current.length > 0 && audioContextRef.current) {
+      // Direct PCM finalization if MediaRecorder was not instantiated
+      const sampleRate = audioContextRef.current.sampleRate || 16000;
+      const totalLength = pcmChunksRef.current.reduce((acc, chunk) => acc + chunk.length, 0);
+      const fullFloatArray = new Float32Array(totalLength);
+      let offset = 0;
+      for (const chunk of pcmChunksRef.current) {
+        fullFloatArray.set(chunk, offset);
+        offset += chunk.length;
+      }
+      const wavBlob = encodeWavFromFloat32(fullFloatArray, sampleRate);
+      setAudioBlob(wavBlob);
+      setAudioUrl(URL.createObjectURL(wavBlob));
+
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    }
+
+    setIsRecording(false);
   };
 
   // Reset / Re-record
@@ -306,6 +464,9 @@ function audioBufferToWav(buffer: AudioBuffer): Blob {
       setAudioUrl(null);
     }
     setAudioBlob(null);
+    pcmChunksRef.current = [];
+    audioChunksRef.current = [];
+    isRecordingRef.current = false;
     setDuration(0);
     setError(null);
   };

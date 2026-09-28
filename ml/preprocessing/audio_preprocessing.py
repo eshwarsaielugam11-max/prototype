@@ -103,12 +103,13 @@ def preprocess_audio(
             waveform = np.mean(waveform, axis=-1)
     waveform = waveform.flatten()
 
-    # 3. Resample to target sample rate if necessary
+    # 3. Resample to target sample rate if necessary using high-quality soxr_hq
     if sample_rate != config.target_sr:
         waveform = librosa.resample(
             waveform,
             orig_sr=sample_rate,
             target_sr=config.target_sr,
+            res_type="soxr_hq",
         )
 
     # 4. Trim leading and trailing silence
