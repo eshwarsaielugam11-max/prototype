@@ -135,6 +135,27 @@ def test_trained_checkpoint_loading():
     print(f"✓ Trained checkpoint test: Successfully loaded weights! Sample inference prob={prob:.4f}")
 
 
+def test_10s_model_forward_shapes():
+    """Verify forward pass on 10s dummy batch (2, 499, 768) returns (2, 1) logits and (2, 125) attention weights."""
+    config_10s_path = PROJECT_ROOT / "ml" / "model_def" / "model_config_10s.json"
+    assert config_10s_path.exists(), f"10s Config file not found: {config_10s_path}"
+    config = ModelConfig.from_json(config_10s_path)
+    assert config.temporal_frames == 499
+    assert config.num_tokens == 125
+
+    model = ParkinsonsVoiceClassifier(config)
+    model.eval()
+
+    dummy_batch = torch.randn(2, 499, 768)
+    with torch.no_grad():
+        logit, attn = model(dummy_batch)
+
+    assert logit.shape == (2, 1), f"Expected logit shape (2, 1), got {logit.shape}"
+    assert attn.shape == (2, 125), f"Expected attention shape (2, 125), got {attn.shape}"
+    assert torch.allclose(attn.sum(dim=-1), torch.ones(2), atol=1e-5)
+    print("✓ 10-second model forward pass verified: (2, 499, 768) -> logit (2, 1), attention (2, 125).")
+
+
 if __name__ == "__main__":
     print("Running model test suite...")
     test_model_config_loading()
@@ -142,4 +163,6 @@ if __name__ == "__main__":
     test_model_forward_shapes()
     test_model_backward_pass()
     test_trained_checkpoint_loading()
+    test_10s_model_forward_shapes()
     print("\nALL SMOKE TESTS PASSED!")
+

@@ -2,6 +2,9 @@
   "target_sr": 16000,
   "trim_top_db": 30,
   "normalize": true,
-  "segment_seconds": 4.0,
+  "segment_seconds": 10.0,
+  "window_stride": 5.0,
+  "min_valid_seconds": 8.0,
+  "max_pad_fraction": 0.2,
   "pad_mode": "repeat"
 }

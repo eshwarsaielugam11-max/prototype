@@ -19,9 +19,11 @@ dist/
 build/
 .npm/
 
-# Operating System files
+# Operating System & IDE files
 .DS_Store
 Thumbs.db
+.freebuff/
+00_colab_train_end_to_end.ipynb - Colab.pdf
 
 # Databases & Local Storage
 *.db
@@ -45,6 +47,7 @@ data/raw/**
 data/processed/**
 !data/processed/.gitkeep
 !data/processed/metadata.csv
+!data/processed/metadata_10s.csv
 !data/processed/split_manifest.json
 data/debug/**
 !data/debug/.gitkeep

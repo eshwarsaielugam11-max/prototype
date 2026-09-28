@@ -8,7 +8,7 @@ FastAPI backend inference runtime to ensure complete train/inference parity.
 from dataclasses import asdict, dataclass
 import json
 from pathlib import Path
-from typing import Any, Dict, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import librosa
 import numpy as np
@@ -21,8 +21,11 @@ class PreprocessConfig:
     target_sr: int = 16000
     trim_top_db: int = 30
     normalize: bool = True
-    segment_seconds: float = 4.0
+    segment_seconds: float = 10.0
     pad_mode: str = "repeat"  # "repeat" or "zero"
+    window_stride: float = 5.0
+    min_valid_seconds: float = 8.0
+    max_pad_fraction: float = 0.2
 
     @property
     def target_samples(self) -> int:
@@ -42,6 +45,9 @@ class PreprocessConfig:
             "normalize",
             "segment_seconds",
             "pad_mode",
+            "window_stride",
+            "min_valid_seconds",
+            "max_pad_fraction",
         }
         filtered = {k: v for k, v in data.items() if k in valid_keys}
         return cls(**filtered)
@@ -151,3 +157,93 @@ def preprocess_audio(
         output = trimmed
 
     return np.ascontiguousarray(output, dtype=np.float32)
+
+
+def extract_windows(
+    waveform: np.ndarray,
+    sample_rate: int,
+    config: PreprocessConfig,
+) -> List[Tuple[np.ndarray, float, float]]:
+    """Extract standard fixed-length windows from raw audio according to configuration rules.
+
+    Windowing rules:
+    - trimmed >= segment_seconds (10s): sliding windows of segment_seconds with window_stride (5s).
+    - min_valid_seconds (8s) <= trimmed < segment_seconds (10s): repeat-pad up to 10s (padding <= 20%).
+    - trimmed < min_valid_seconds (8s): excluded (returns empty list).
+
+    Args:
+        waveform: Input audio array of shape (samples,) or (channels, samples).
+        sample_rate: Sampling rate of input audio in Hz.
+        config: PreprocessConfig instance.
+
+    Returns:
+        List of tuples: (window_array: np.ndarray of shape (target_samples,), window_start_sec: float, padded_fraction: float).
+    """
+    if waveform is None or waveform.size == 0:
+        return []
+
+    # 1. Convert to floating-point representation
+    if np.issubdtype(waveform.dtype, np.integer):
+        max_val = float(np.iinfo(waveform.dtype).max)
+        waveform = waveform.astype(np.float32) / max_val
+    else:
+        waveform = waveform.astype(np.float32)
+
+    # 2. Convert to mono if multichannel
+    if waveform.ndim > 1:
+        if waveform.shape[0] < waveform.shape[1] and waveform.shape[0] <= 8:
+            waveform = np.mean(waveform, axis=0)
+        else:
+            waveform = np.mean(waveform, axis=-1)
+    waveform = waveform.flatten()
+
+    # 3. Resample to target sample rate if necessary
+    if sample_rate != config.target_sr:
+        waveform = librosa.resample(
+            waveform,
+            orig_sr=sample_rate,
+            target_sr=config.target_sr,
+            res_type="soxr_hq",
+        )
+
+    # 4. Trim leading and trailing silence
+    trimmed, _ = librosa.effects.trim(waveform, top_db=config.trim_top_db)
+    if len(trimmed) == 0:
+        return []
+
+    # 5. Peak amplitude normalization
+    if config.normalize:
+        peak = np.max(np.abs(trimmed))
+        if peak > 1e-8:
+            trimmed = trimmed / peak
+
+    trimmed_dur = len(trimmed) / config.target_sr
+    target_samples = config.target_samples
+
+    # Exclude files shorter than min_valid_seconds
+    if trimmed_dur < config.min_valid_seconds:
+        return []
+
+    # Short valid file between min_valid_seconds and segment_seconds: pad up to segment_seconds
+    if trimmed_dur < config.segment_seconds:
+        padded_fraction = float((config.segment_seconds - trimmed_dur) / config.segment_seconds)
+        if config.pad_mode == "repeat":
+            num_repeats = int(np.ceil(target_samples / max(len(trimmed), 1)))
+            window = np.tile(trimmed, num_repeats)[:target_samples]
+        else:
+            window = np.pad(trimmed, (0, target_samples - len(trimmed)), mode="constant", constant_values=0.0)
+        return [(np.ascontiguousarray(window, dtype=np.float32), 0.0, padded_fraction)]
+
+    # Sliding windows for trimmed_dur >= segment_seconds
+    stride_samples = int(round(config.window_stride * config.target_sr))
+    win_samples = target_samples
+    windows: List[Tuple[np.ndarray, float, float]] = []
+    start_sample = 0
+
+    while start_sample + win_samples <= len(trimmed):
+        win = trimmed[start_sample : start_sample + win_samples]
+        start_sec = float(start_sample / config.target_sr)
+        windows.append((np.ascontiguousarray(win, dtype=np.float32), start_sec, 0.0))
+        start_sample += stride_samples
+
+    return windows

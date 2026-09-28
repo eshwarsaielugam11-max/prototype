@@ -32,6 +32,12 @@ class ModelConfig:
     dropout: float = 0.3
     mlp_hidden_dim: int = 128
     num_classes: int = 1
+    num_tokens: int = 50
+
+    def __post_init__(self) -> None:
+        """Auto-adjust num_tokens when temporal_frames=499 (10-second audio)."""
+        if self.temporal_frames == 499 and self.num_tokens == 50:
+            self.num_tokens = 125
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary."""
@@ -52,8 +58,14 @@ class ModelConfig:
             "dropout",
             "mlp_hidden_dim",
             "num_classes",
+            "num_tokens",
         }
         filtered = {k: v for k, v in data.items() if k in valid_keys}
+        if "num_tokens" not in filtered:
+            if filtered.get("temporal_frames") == 499:
+                filtered["num_tokens"] = 125
+            elif filtered.get("temporal_frames") == 199:
+                filtered["num_tokens"] = 50
         return cls(**filtered)
 
     @classmethod
@@ -106,7 +118,7 @@ class ParkinsonsVoiceClassifier(nn.Module):
             d_model=self.config.transformer_dim,
             nhead=self.config.transformer_heads,
             num_layers=self.config.transformer_layers,
-            num_tokens=50,
+            num_tokens=self.config.num_tokens,
             dropout=self.config.dropout,
         )
 
@@ -164,12 +176,14 @@ class ParkinsonsVoiceClassifier(nn.Module):
 
 def load_trained_model(
     checkpoint_path: Union[str, Path] = "models/artifact/best_model.pt",
+    config: Optional[ModelConfig] = None,
     device: str = "cpu",
 ) -> ParkinsonsVoiceClassifier:
     """Convenience factory function to instantiate and load the trained classifier weights.
 
     Args:
         checkpoint_path: Path to the .pt checkpoint file.
+        config: Optional ModelConfig instance. If None, auto-detected from checkpoint.
         device: Device to map tensors onto ('cpu', 'cuda', or 'mps').
 
     Returns:
@@ -179,11 +193,19 @@ def load_trained_model(
     if not path.exists():
         raise FileNotFoundError(f"Checkpoint not found at: {path.resolve()}")
 
-    model = ParkinsonsVoiceClassifier()
     state_dict = torch.load(str(path), map_location=device)
     if isinstance(state_dict, dict) and "model_state_dict" in state_dict:
         state_dict = state_dict["model_state_dict"]
 
+    if config is None:
+        if "encoder.pos_embedding" in state_dict:
+            tokens = state_dict["encoder.pos_embedding"].shape[1]
+            tf = 499 if tokens == 125 else 199
+            config = ModelConfig(temporal_frames=tf, num_tokens=tokens)
+        else:
+            config = ModelConfig()
+
+    model = ParkinsonsVoiceClassifier(config)
     model.load_state_dict(state_dict, strict=True)
     model.to(device)
     model.eval()
